@@ -25,7 +25,8 @@ erDiagram
     users ||--o{ bookmarks : "저장"
     posts ||--o{ bookmarks : ""
     users ||--o{ reports : "신고"
-    posts ||--o{ reports : ""
+    posts |o--o{ reports : ""
+    comments |o--o{ reports : ""
 
     users {
         BIGSERIAL id PK
@@ -108,6 +109,7 @@ erDiagram
     reports {
         BIGSERIAL id PK
         BIGINT post_id FK
+        BIGINT comment_id FK
         BIGINT reporter_id FK
         VARCHAR reason
         VARCHAR detail
@@ -254,8 +256,15 @@ CREATE UNIQUE INDEX uk_tags_name_lower ON tags (LOWER(name));
 | created_at | TIMESTAMP | N | | |
 | updated_at | TIMESTAMP | N | | |
 
-- **깊이 1단계 규칙:** `parent_id`로 가리키는 댓글은 반드시 `parent_id IS NULL`이어야 해요 (서비스 검증).
-- 임시저장 글(`DRAFT`)에는 댓글을 달 수 없어요.
+- **깊이 1단계 규칙:** `parent_id`로 가리키는 댓글은 반드시 `parent_id IS NULL`이어야 하고, **같은 글의 댓글**이어야 해요 (서비스 검증. 다른 행을 봐야 해서 CHECK로는 막을 수 없어요). 화면에서는 답글에 [답글] 버튼을 보여주지 않아요.
+- 임시저장 글과 볼 수 없는 글(ERD 4.1)에는 댓글을 달 수 없어요.
+- **삭제 권한:** 댓글 작성자 본인, 그리고 **그 글의 블로그 주인**이에요 (C-01). 수정은 작성자 본인만 할 수 있어요.
+- **형식:** 일반 텍스트만 저장하고 보여줄 때 escape해요. 마크다운과 HTML은 렌더링하지 않아요.
+- **조회:** 글 상세에서 한 번에 모두 불러와요. 일반 댓글은 오래된 순이고, 각 댓글 아래에 답글을 오래된 순으로 붙여요.
+  ```sql
+  ORDER BY COALESCE(c.parent_id, c.id), c.parent_id NULLS FIRST, c.created_at
+  ```
+- `updated_at > created_at`이면 화면에 "(수정됨)"을 표시해요.
 
 ### 3.7 `post_likes` / `bookmarks` (좋아요, 북마크)
 | 컬럼 | 타입 | NULL | 설명 |
@@ -271,15 +280,27 @@ CREATE UNIQUE INDEX uk_tags_name_lower ON tags (LOWER(name));
 | 컬럼 | 타입 | NULL | 기본값 | 설명 |
 |---|---|---|---|---|
 | id | BIGSERIAL | N | | PK |
-| post_id | BIGINT | N | | FK → posts |
+| post_id | BIGINT | **Y** | | FK → posts. **글 신고**일 때 채워요 |
+| comment_id | BIGINT | **Y** | | FK → comments. **댓글 신고**일 때 채워요 (R-04) |
 | reporter_id | BIGINT | N | | FK → users |
 | reason | VARCHAR(20) | N | | `SPAM` / `ABUSE` / `ADULT` / `ETC` |
 | detail | VARCHAR(500) | Y | | `ETC`를 고를 때 적는 상세 사유 |
 | status | VARCHAR(20) | N | `'RECEIVED'` | 2차 관리자 처리를 대비한 컬럼이에요 |
 | created_at | TIMESTAMP | N | | |
 
-- `UNIQUE(post_id, reporter_id)`로 중복 신고를 막아요 (R-02).
-- **자기 글은 신고할 수 없어요** (R-01). 신고 서비스에서 `posts.blog_id → blogs.user_id`가 `reporter_id`와 같으면 **400**으로 거부해요.
+**글 신고와 댓글 신고를 한 테이블에서 관리해요**
+```sql
+-- 신고 대상은 글 또는 댓글 중 정확히 하나
+CONSTRAINT ck_reports_one_target CHECK ((post_id IS NULL) <> (comment_id IS NULL)),
+-- 중복 신고 방지 (R-02)
+CONSTRAINT uk_reports_post    UNIQUE (post_id, reporter_id),
+CONSTRAINT uk_reports_comment UNIQUE (comment_id, reporter_id)
+```
+- **CHECK 제약:** `post_id`와 `comment_id` 중 **딱 하나만** 채워져 있어야 해요. 둘 다 비거나 둘 다 채워지면 DB가 거부해요.
+- **UNIQUE 두 개:** PostgreSQL은 UNIQUE에서 NULL끼리는 서로 다른 값으로 봐요. 그래서 댓글 신고 행(`post_id`가 NULL)은 `uk_reports_post`에 걸리지 않고, 글 신고 행은 `uk_reports_comment`에 걸리지 않아요. 각자 자기 대상에 대해서만 중복을 막아요.
+- **한 테이블로 둔 이유:** 2차 관리자 화면에서 신고를 **한 목록**으로 처리할 수 있고, 사유와 처리 상태 같은 컬럼을 두 번 만들 필요가 없어요. FK도 그대로 유지돼요.
+- 신고할 수 없는 댓글: **자기 댓글**, `is_deleted = true`인 댓글, 볼 수 없는 글(ERD 4.1)의 댓글이에요 (서비스 검증).
+- **자기 글과 자기 댓글은 신고할 수 없어요** (R-01, R-04). 글은 `posts.blog_id → blogs.user_id`, 댓글은 `comments.user_id`가 `reporter_id`와 같으면 **400**으로 거부해요.
   - DB로 막지 않는 이유: 확인하려면 `reports → posts → blogs` 세 테이블을 봐야 해서 CHECK 제약으로는 표현할 수 없고, 트리거가 필요해요. 신고가 만들어지는 경로는 신고 API 하나뿐이라 **서비스 한 곳에서 검증하는 것이 명확하고 충분해요.**
 
 ---
@@ -327,9 +348,9 @@ AND c.visibility = 'PUBLIC'   -- posts p JOIN categories c ON c.id = p.category_
 | 상황 | 처리 |
 |---|---|
 | **회원 탈퇴** (U-06) | ① 본인 블로그의 글을 모두 Hard Delete해요 (아래 "글 삭제" 규칙이 함께 적용돼요) ② 본인 카테고리와 블로그를 삭제해요 ③ 본인이 누른 좋아요와 북마크를 삭제하고, 그 글의 `like_count`를 줄여요 ④ 다른 사람 글에 단 댓글은 남겨요 ⑤ `users`는 `status = DELETED`로 바꾸고 `deleted_at`을 기록해요 (Soft Delete). **개인정보도 지워요:** `email`은 `deleted_{id}@ownlog.invalid`, `nickname`은 `탈퇴한 사용자`, `password`는 무작위 값의 해시로 바꾸고, `bio`와 `profile_image_url`은 NULL로 바꾸고 프로필 이미지 파일을 삭제해요. `username`은 재사용 방지를 위해 그대로 둬요 |
-| **글 삭제** (P-04) | 해당 글의 댓글, 좋아요, 북마크, `post_tags`, **신고 기록까지 함께 삭제**해요 (MVP 한정. 신고 기록 보존은 2차 관리자 기능과 함께 다뤄요) |
+| **글 삭제** (P-04) | 해당 글의 댓글(그 댓글들에 대한 신고 포함), 좋아요, 북마크, `post_tags`, **글 신고 기록까지 함께 삭제**해요 (MVP 한정. 신고 기록 보존은 2차 관리자 기능과 함께 다뤄요) |
 | **카테고리 삭제** (B-04) | 그 카테고리의 글을 같은 블로그의 "미분류"로 옮긴 뒤 삭제해요. 기본 카테고리는 삭제할 수 없어요. **삭제하는 카테고리가 비공개면, 옮기는 글의 `visibility`를 모두 `PRIVATE`으로 바꿔서** 숨겨 둔 글이 노출되지 않게 해요 (B-05) |
-| **댓글 삭제** (C-01) | 답글이 있으면 `is_deleted = true`로 바꾸고 "삭제된 댓글입니다"로 표시해요. 답글이 없으면 Hard Delete해요 |
+| **댓글 삭제** (C-01) | 댓글 작성자 또는 그 글의 블로그 주인이 삭제할 수 있어요. 답글이 있으면 `is_deleted = true`로 바꾸고 "삭제된 댓글입니다"로 표시해요 (행이 남으니 그 댓글의 신고 기록도 남아요). 답글이 없으면 그 댓글의 신고 기록과 함께 Hard Delete해요. **답글을 지운 뒤 부모가 `is_deleted = true`이고 남은 답글이 없으면 부모도 함께 Hard Delete해요** |
 | **좋아요 추가·취소** (C-03) | `post_likes`의 INSERT나 DELETE와 `posts.like_count ± 1`을 같은 트랜잭션에서 처리해요 |
 | **임시저장 글 발행** (D-05) | `status`를 `DRAFT`에서 `PUBLISHED`로 바꾸고 `published_at`을 기록해요. 필수 항목(제목, 본문, 카테고리)도 검증해요 |
 | **발행 글 수정** (P-04) | **제목, 본문, 썸네일, 태그**가 바뀌면 `edited_at`을 갱신해요. 카테고리 이동과 공개 범위 변경은 내용 수정이 아니라서 갱신하지 않아요 |
