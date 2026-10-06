@@ -310,7 +310,7 @@ AND c.visibility = 'PUBLIC'   -- posts p JOIN categories c ON c.id = p.category_
 
 | 기능 | ERD 변경 |
 |---|---|
-| 다중 블로그 | 스키마 변경 없음. `blogs`에 주소용 `slug` 컬럼만 추가해요 |
+| 다중 블로그 | 기존 테이블 구조와 데이터는 그대로예요. `blogs`에 주소용 `slug` 컬럼(NULL 허용)만 추가하고, 글과 카테고리의 FK는 이미 `blog_id`라서 옮길 필요가 없어요 |
 | 관리자, 신고 처리 | 스키마 변경 없음. `users.role`은 MVP부터 있으니 `ADMIN` 권한을 부여하고, `reports.status`에 처리 상태를 넣어요 |
 | 구독, 알림 | `subscriptions`, `notifications` 테이블을 새로 만들어요 |
 | 조회수 중복 방지 | `post_views` 테이블 또는 Redis를 써요 |
