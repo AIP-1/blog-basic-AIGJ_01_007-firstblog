@@ -249,6 +249,7 @@ CONSTRAINT ck_posts_published_required CHECK (
 | created_at | TIMESTAMP | N | 북마크 목록은 이 값의 최신순으로 정렬해요 |
 
 - 복합 PK `(user_id, post_id)`로 **1인 1회** 규칙을 DB에서 보장해요.
+- 좋아요와 북마크 모두 **자기 글에도 할 수 있어요** (C-03, K-01). 자기 글 좋아요도 `like_count`에 포함돼요.
 
 ### 3.8 `reports` (신고)
 | 컬럼 | 타입 | NULL | 기본값 | 설명 |
@@ -262,6 +263,8 @@ CONSTRAINT ck_posts_published_required CHECK (
 | created_at | TIMESTAMP | N | | |
 
 - `UNIQUE(post_id, reporter_id)`로 중복 신고를 막아요 (R-02).
+- **자기 글은 신고할 수 없어요** (R-01). 신고 서비스에서 `posts.blog_id → blogs.user_id`가 `reporter_id`와 같으면 **400**으로 거부해요.
+  - DB로 막지 않는 이유: 확인하려면 `reports → posts → blogs` 세 테이블을 봐야 해서 CHECK 제약으로는 표현할 수 없고, 트리거가 필요해요. 신고가 만들어지는 경로는 신고 API 하나뿐이라 **서비스 한 곳에서 검증하는 것이 명확하고 충분해요.**
 
 ---
 
