@@ -218,13 +218,29 @@ CONSTRAINT ck_posts_published_required CHECK (
 | 테이블 | 컬럼 | 타입 | NULL | 설명 |
 |---|---|---|---|---|
 | tags | id | BIGSERIAL | N | PK |
-| tags | name | VARCHAR(20) | N | **UNIQUE.** 앞뒤 공백을 제거하고 저장해요 |
+| tags | name | VARCHAR(20) | N | **대소문자 무시 UNIQUE** (`LOWER(name)`). 처음 만들어진 표기 그대로 저장하고 보여줘요. `#`은 빼고, 앞뒤 공백을 제거하고 저장해요 |
 | tags | created_at | TIMESTAMP | N | |
 | post_tags | post_id | BIGINT | N | PK, FK → posts |
 | post_tags | tag_id | BIGINT | N | PK, FK → tags |
 
-- 글 하나에 태그는 **최대 10개**예요 (서비스 검증).
+- 글 하나에 태그는 **최대 10개**, 태그당 **20자**예요. **한글, 영문, 숫자, `_`, `-`만** 쓸 수 있고 공백은 안 돼요 (서비스 검증). 태그 이름이 URL(`/tags/{태그명}`)에 들어가기 때문이에요.
+- `tags`는 블로그나 회원에 속하지 않는 **서비스 전체의 태그 사전**이에요. 내가 쓴 `#Java`와 다른 사람이 쓴 `#Java`는 같은 행이에요.
 - 어떤 글에서도 쓰지 않는 태그는 MVP에서 지우지 않고 남겨 둬요.
+
+**대소문자 무시 UNIQUE 인덱스**
+```sql
+CREATE UNIQUE INDEX uk_tags_name_lower ON tags (LOWER(name));
+```
+- `Java`가 이미 있으면 `java`나 `JAVA`는 새로 만들지 않고 기존 `Java` 태그를 써요. 조회도 `WHERE LOWER(name) = LOWER(?)`로 해요.
+- 일반 `UNIQUE(name)` 대신 이 인덱스를 써요. 함수를 쓰는 인덱스라 JPA로는 만들 수 없어서 Flyway SQL로 만들어요.
+
+**글 저장 시 태그 처리 순서**
+1. 앞뒤 공백 제거 → 빈 값 제거 → **대소문자 무시로 중복 제거** (안 하면 `post_tags` PK 위반이 나요)
+2. 개수, 길이, 허용 문자 검증
+3. 태그 찾기 또는 만들기: `INSERT ... ON CONFLICT DO NOTHING` 후 다시 조회해요 (두 사람이 동시에 같은 새 태그를 만들 때 UNIQUE 위반을 피하려는 거예요)
+4. 글 수정 때는 그 글의 `post_tags`를 모두 지우고 새로 넣어요. 태그 구성이 실제로 바뀌었으면 `edited_at`을 갱신해요
+
+**표시 순서:** `post_tags`에는 순서 정보가 없어서, 글 상세에서는 태그를 **이름순**으로 정렬해서 보여줘요.
 
 ### 3.6 `comments` (댓글과 대댓글)
 | 컬럼 | 타입 | NULL | 기본값 | 설명 |
