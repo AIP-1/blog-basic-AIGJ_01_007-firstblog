@@ -275,6 +275,20 @@ CREATE UNIQUE INDEX uk_tags_name_lower ON tags (LOWER(name));
 
 - 복합 PK `(user_id, post_id)`로 **1인 1회** 규칙을 DB에서 보장해요.
 - 좋아요와 북마크 모두 **자기 글에도 할 수 있어요** (C-03, K-01). 자기 글 좋아요도 `like_count`에 포함돼요.
+- 두 테이블 모두 **`(post_id)` 인덱스**를 따로 둬요. PK가 `(user_id, post_id)` 순서라서 `post_id`만으로 찾는 조회(글 삭제 시 함께 삭제)에는 PK를 쓸 수 없기 때문이에요.
+- 글이 비공개가 되거나 카테고리가 비공개가 돼도 행은 지우지 않아요. 좋아요 수는 유지되고, 북마크는 목록에서만 빠졌다가 다시 공개되면 돌아와요.
+
+**API는 누르기와 취소를 따로 둬요 (멱등성)**
+- 누르기 `PUT`, 취소 `DELETE`예요. 토글 API 하나로 만들면 더블클릭으로 요청이 두 번 갔을 때 눌렀다가 바로 취소돼요.
+- **`like_count`는 실제로 행이 바뀌었을 때만** 함께 바꿔요 (같은 트랜잭션).
+  ```sql
+  -- 누르기: 1줄 들어갔을 때만 +1
+  INSERT INTO post_likes (user_id, post_id, created_at) VALUES (?, ?, now())
+  ON CONFLICT DO NOTHING;
+  -- 취소: 1줄 지워졌을 때만 -1
+  DELETE FROM post_likes WHERE user_id = ? AND post_id = ?;
+  ```
+  이미 누른 상태에서 또 누르기 요청이 오면 아무것도 바뀌지 않고 성공으로 응답해요.
 
 ### 3.8 `reports` (신고)
 | 컬럼 | 타입 | NULL | 기본값 | 설명 |
@@ -315,6 +329,8 @@ CONSTRAINT uk_reports_comment UNIQUE (comment_id, reporter_id)
 | posts | `(published_at, like_count DESC)` | 인기 글 (S-02) |
 | post_tags | `(tag_id)` | 태그 모아보기 (S-06) |
 | comments | `(post_id, parent_id, created_at)` | 글 상세의 댓글 목록 |
+| post_likes | `(post_id)` | 글 삭제 시 좋아요 함께 삭제 |
+| bookmarks | `(post_id)` | 글 삭제 시 북마크 함께 삭제 |
 | blogs | `(user_id)` | 회원의 블로그 찾기 |
 | categories | `UNIQUE(blog_id) WHERE is_default = true` | 기본 카테고리를 1개로 보장 |
 
