@@ -1,6 +1,7 @@
 # OwnLog ERD (데이터베이스 설계)
 
 > - 작성일: 2026-10-06
+> - 최종 수정: 2026-10-06 (카테고리 공개 범위 추가)
 > - 기준 문서: [요구사항.md](../요구사항.md) (8장 2단계 결정 사항)
 > - DB: PostgreSQL / ORM: Spring Data JPA
 
@@ -53,6 +54,7 @@ erDiagram
         VARCHAR name
         INT display_order
         BOOLEAN is_default
+        VARCHAR visibility
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -164,11 +166,14 @@ erDiagram
 | name | VARCHAR(30) | N | | `UNIQUE(blog_id, name)` |
 | display_order | INT | N | `0` | 사이드바 정렬 순서 (B-04 순서 변경) |
 | is_default | BOOLEAN | N | `false` | 기본 카테고리 "미분류"만 `true` |
+| visibility | VARCHAR(20) | N | `'PUBLIC'` | `PUBLIC` / `PRIVATE`. 비공개면 그 안의 글은 글 설정과 관계없이 방문자에게 숨겨져요 (B-05, 4.1절) |
 | created_at | TIMESTAMP | N | | |
 | updated_at | TIMESTAMP | N | | |
 
 - **부분 UNIQUE 인덱스** `UNIQUE(blog_id) WHERE is_default = true`로 블로그마다 기본 카테고리를 1개만 둘 수 있게 해요.
-- `is_default = true`인 카테고리는 **삭제할 수 없어요.** 이름과 순서는 바꿀 수 있어요.
+- `is_default = true`인 카테고리는 **삭제할 수 없어요.** 이름, 순서, 공개 범위는 바꿀 수 있어요.
+- 블로그당 카테고리는 **최대 30개**예요 (서비스 검증).
+- 카테고리의 공개 범위를 바꿔도 `posts.visibility`는 바뀌지 않아요. 그래서 다시 공개로 돌리면 각 글은 원래 설정대로 보여요.
 
 ### 3.4 `posts` (글과 임시저장 글)
 | 컬럼 | 타입 | NULL | 기본값 | 설명 |
@@ -181,7 +186,7 @@ erDiagram
 | summary | VARCHAR(200) | Y | | 카드 목록용 요약. 저장할 때 본문에서 마크다운 문법을 제거하고 앞부분으로 자동으로 만들어요 |
 | thumbnail_url | VARCHAR(500) | Y | | |
 | status | VARCHAR(20) | N | `'DRAFT'` | `DRAFT` / `PUBLISHED` |
-| visibility | VARCHAR(20) | N | `'PUBLIC'` | `PUBLIC` / `PRIVATE` |
+| visibility | VARCHAR(20) | N | `'PUBLIC'` | `PUBLIC` / `PRIVATE`. 글 자체의 설정이에요. 실제 노출 여부는 카테고리의 공개 범위와 함께 판단해요 (4.1절) |
 | view_count | INT | N | `0` | 작성자 본인 조회는 제외해요 |
 | like_count | INT | N | `0` | 인기순 정렬용 비정규화 컬럼. 좋아요 추가나 취소와 **같은 트랜잭션**에서 바꿔요 |
 | published_at | TIMESTAMP | Y | | 처음 발행한 시각. 최신순 정렬과 "최근 7일" 기준이에요 |
@@ -255,6 +260,27 @@ erDiagram
 | blogs | `(user_id)` | 회원의 블로그 찾기 |
 | categories | `UNIQUE(blog_id) WHERE is_default = true` | 기본 카테고리를 1개로 보장 |
 
+### 4.1 방문자가 볼 수 있는 글 조건 (공개 조건)
+
+블로그 주인이 아닌 사람에게 글이 보이려면 **아래 조건을 모두 만족**해야 해요.
+
+```sql
+p.status = 'PUBLISHED'
+AND p.visibility = 'PUBLIC'
+AND c.visibility = 'PUBLIC'   -- posts p JOIN categories c ON c.id = p.category_id
+```
+
+| 카테고리 | 글 | 방문자 | 주인 |
+|---|---|---|---|
+| PUBLIC | PUBLIC | 보임 | 보임 |
+| PUBLIC | PRIVATE | 숨김 | 보임 (🔒) |
+| PRIVATE | PUBLIC | 숨김 | 보임 (🔒) |
+| PRIVATE | PRIVATE | 숨김 | 보임 (🔒) |
+
+- **이 조건은 리포지토리 한 곳에 공통으로 정의하고**, 메인, 검색, 태그, 블로그 홈, 카테고리별 목록, 북마크 목록, 글 상세, 사이드바 글 수가 모두 이 조건을 거쳐요. 조회마다 조건을 따로 쓰면 하나만 빠뜨려도 숨긴 글이 노출되기 때문이에요.
+- 볼 수 없는 글에 대한 상세 조회, 좋아요, 댓글, 북마크, 신고 요청에는 **404(존재하지 않는 글)** 로 응답해요.
+- 3단계 테스트에서 **"비공개 카테고리의 글이 각 목록과 상세에 나오지 않는지"** 를 반드시 검증해요.
+
 > 키워드 검색(S-05)은 MVP에서 `ILIKE '%키워드%'`로 구현해요. 데이터가 많아지면 2차에서 `pg_trgm` 인덱스나 전문 검색(Full-Text Search)으로 바꿔요.
 
 ---
@@ -265,7 +291,7 @@ erDiagram
 |---|---|
 | **회원 탈퇴** (U-06) | ① 본인 블로그의 글을 모두 Hard Delete해요 (아래 "글 삭제" 규칙이 함께 적용돼요) ② 본인 카테고리와 블로그를 삭제해요 ③ 본인이 누른 좋아요와 북마크를 삭제하고, 그 글의 `like_count`를 줄여요 ④ 다른 사람 글에 단 댓글은 남겨요 ⑤ `users`는 `status = DELETED`로 바꾸고 이메일을 익명화하고 `deleted_at`을 기록해요 (Soft Delete) |
 | **글 삭제** (P-04) | 해당 글의 댓글, 좋아요, 북마크, `post_tags`, **신고 기록까지 함께 삭제**해요 (MVP 한정. 신고 기록 보존은 2차 관리자 기능과 함께 다뤄요) |
-| **카테고리 삭제** (B-04) | 그 카테고리의 글을 같은 블로그의 "미분류"로 옮긴 뒤 삭제해요. 기본 카테고리는 삭제할 수 없어요 |
+| **카테고리 삭제** (B-04) | 그 카테고리의 글을 같은 블로그의 "미분류"로 옮긴 뒤 삭제해요. 기본 카테고리는 삭제할 수 없어요. **삭제하는 카테고리가 비공개면, 옮기는 글의 `visibility`를 모두 `PRIVATE`으로 바꿔서** 숨겨 둔 글이 노출되지 않게 해요 (B-05) |
 | **댓글 삭제** (C-01) | 답글이 있으면 `is_deleted = true`로 바꾸고 "삭제된 댓글입니다"로 표시해요. 답글이 없으면 Hard Delete해요 |
 | **좋아요 추가·취소** (C-03) | `post_likes`의 INSERT나 DELETE와 `posts.like_count ± 1`을 같은 트랜잭션에서 처리해요 |
 | **임시저장 글 발행** (D-05) | `status`를 `DRAFT`에서 `PUBLISHED`로 바꾸고 `published_at`을 기록해요. 필수 항목(제목, 본문, 카테고리)도 검증해요 |
