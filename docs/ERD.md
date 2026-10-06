@@ -19,7 +19,7 @@ erDiagram
     tags ||--o{ post_tags : ""
     posts ||--o{ comments : "달림"
     users ||--o{ comments : "작성"
-    comments ||--o{ comments : "대댓글 (1단계)"
+    comments |o--o{ comments : "대댓글 (1단계)"
     users ||--o{ post_likes : "누름"
     posts ||--o{ post_likes : ""
     users ||--o{ bookmarks : "저장"
