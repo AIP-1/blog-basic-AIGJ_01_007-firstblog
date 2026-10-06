@@ -35,6 +35,7 @@ erDiagram
         VARCHAR nickname
         VARCHAR bio
         VARCHAR profile_image_url
+        VARCHAR role
         VARCHAR status
         TIMESTAMP created_at
         TIMESTAMP updated_at
@@ -135,16 +136,20 @@ erDiagram
 | 컬럼 | 타입 | NULL | 기본값 | 설명 |
 |---|---|---|---|---|
 | id | BIGSERIAL | N | | PK |
-| email | VARCHAR(255) | N | | **UNIQUE.** 탈퇴하면 `deleted_{id}@ownlog.invalid`로 익명화해요 (그래서 같은 이메일로 재가입할 수 있어요) |
+| email | VARCHAR(255) | N | | **UNIQUE.** 로그인 ID예요. **소문자로 바꿔서 저장**해요. 탈퇴하면 `deleted_{id}@ownlog.invalid`로 익명화해요 (그래서 같은 이메일로 재가입할 수 있어요) |
 | password | VARCHAR(255) | N | | BCrypt 해시 |
-| username | VARCHAR(20) | N | | **UNIQUE.** 아이디이자 `/@아이디` 주소예요. 영문 소문자, 숫자, `_` 3~20자. 탈퇴해도 해제하지 않아서 **재사용할 수 없어요** |
+| username | VARCHAR(20) | N | | **UNIQUE.** 아이디이자 `/@아이디` 주소예요. 영문 소문자, 숫자, `_` 3~20자. 탈퇴해도 해제하지 않아서 **재사용할 수 없어요.** 예약어(`admin`, `ownlog`, `official`, `system` 등)는 쓸 수 없어요 |
 | nickname | VARCHAR(20) | N | | 2~20자 |
 | bio | VARCHAR(100) | Y | | 한 줄 소개 |
 | profile_image_url | VARCHAR(500) | Y | | |
+| role | VARCHAR(20) | N | `'USER'` | `USER` / `ADMIN`. 관리자 기능은 2차지만 권한 구조를 미리 준비해 둬요 |
 | status | VARCHAR(20) | N | `'ACTIVE'` | `ACTIVE` / `DELETED` |
 | created_at | TIMESTAMP | N | | |
 | updated_at | TIMESTAMP | N | | |
 | deleted_at | TIMESTAMP | Y | | 탈퇴 시각 |
+
+- **JWT 인증 필터는 요청마다 `status = 'ACTIVE'`인지 확인**해요. 탈퇴한 회원이 만료 전 토큰으로 요청하는 걸 막기 위해서예요.
+- Spring Security의 `UserDetails.getUsername()`에는 이 테이블의 `username`(아이디)이 아니라 **`email`(로그인 ID)** 을 넘겨요.
 
 ### 3.2 `blogs` (블로그) ⭐ 다중 블로그 확장 포인트
 | 컬럼 | 타입 | NULL | 기본값 | 설명 |
@@ -289,7 +294,7 @@ AND c.visibility = 'PUBLIC'   -- posts p JOIN categories c ON c.id = p.category_
 
 | 상황 | 처리 |
 |---|---|
-| **회원 탈퇴** (U-06) | ① 본인 블로그의 글을 모두 Hard Delete해요 (아래 "글 삭제" 규칙이 함께 적용돼요) ② 본인 카테고리와 블로그를 삭제해요 ③ 본인이 누른 좋아요와 북마크를 삭제하고, 그 글의 `like_count`를 줄여요 ④ 다른 사람 글에 단 댓글은 남겨요 ⑤ `users`는 `status = DELETED`로 바꾸고 이메일을 익명화하고 `deleted_at`을 기록해요 (Soft Delete) |
+| **회원 탈퇴** (U-06) | ① 본인 블로그의 글을 모두 Hard Delete해요 (아래 "글 삭제" 규칙이 함께 적용돼요) ② 본인 카테고리와 블로그를 삭제해요 ③ 본인이 누른 좋아요와 북마크를 삭제하고, 그 글의 `like_count`를 줄여요 ④ 다른 사람 글에 단 댓글은 남겨요 ⑤ `users`는 `status = DELETED`로 바꾸고 `deleted_at`을 기록해요 (Soft Delete). **개인정보도 지워요:** `email`은 `deleted_{id}@ownlog.invalid`, `nickname`은 `탈퇴한 사용자`, `password`는 무작위 값의 해시로 바꾸고, `bio`와 `profile_image_url`은 NULL로 바꾸고 프로필 이미지 파일을 삭제해요. `username`은 재사용 방지를 위해 그대로 둬요 |
 | **글 삭제** (P-04) | 해당 글의 댓글, 좋아요, 북마크, `post_tags`, **신고 기록까지 함께 삭제**해요 (MVP 한정. 신고 기록 보존은 2차 관리자 기능과 함께 다뤄요) |
 | **카테고리 삭제** (B-04) | 그 카테고리의 글을 같은 블로그의 "미분류"로 옮긴 뒤 삭제해요. 기본 카테고리는 삭제할 수 없어요. **삭제하는 카테고리가 비공개면, 옮기는 글의 `visibility`를 모두 `PRIVATE`으로 바꿔서** 숨겨 둔 글이 노출되지 않게 해요 (B-05) |
 | **댓글 삭제** (C-01) | 답글이 있으면 `is_deleted = true`로 바꾸고 "삭제된 댓글입니다"로 표시해요. 답글이 없으면 Hard Delete해요 |
@@ -306,7 +311,7 @@ AND c.visibility = 'PUBLIC'   -- posts p JOIN categories c ON c.id = p.category_
 | 기능 | ERD 변경 |
 |---|---|
 | 다중 블로그 | 스키마 변경 없음. `blogs`에 주소용 `slug` 컬럼만 추가해요 |
-| 관리자, 신고 처리 | `users.role` 컬럼을 추가하고 `reports.status`에 처리 상태를 넣어요 |
+| 관리자, 신고 처리 | 스키마 변경 없음. `users.role`은 MVP부터 있으니 `ADMIN` 권한을 부여하고, `reports.status`에 처리 상태를 넣어요 |
 | 구독, 알림 | `subscriptions`, `notifications` 테이블을 새로 만들어요 |
 | 조회수 중복 방지 | `post_views` 테이블 또는 Redis를 써요 |
 | 방문자 통계 | `blog_daily_visits` 테이블을 새로 만들어요 |
