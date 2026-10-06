@@ -1,7 +1,7 @@
 # OwnLog ERD (데이터베이스 설계)
 
 > - 작성일: 2026-10-06
-> - 최종 수정: 2026-10-06 (카테고리 공개 범위 추가)
+> - 최종 수정: 2026-10-06 (카테고리 공개 범위, 토픽 추가)
 > - 기준 문서: [요구사항.md](../요구사항.md) (8장 2단계 결정 사항)
 > - DB: PostgreSQL / ORM: Spring Data JPA
 
@@ -15,6 +15,7 @@ erDiagram
     blogs ||--o{ categories : "가짐"
     blogs ||--o{ posts : "가짐"
     categories ||--o{ posts : "분류"
+    topics |o--o{ posts : "주제"
     posts ||--o{ post_tags : ""
     tags ||--o{ post_tags : ""
     posts ||--o{ comments : "달림"
@@ -60,10 +61,17 @@ erDiagram
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
+    topics {
+        BIGSERIAL id PK
+        VARCHAR slug UK
+        VARCHAR name UK
+        INT display_order
+    }
     posts {
         BIGSERIAL id PK
         BIGINT blog_id FK
         BIGINT category_id FK
+        BIGINT topic_id FK
         VARCHAR title
         TEXT content
         VARCHAR summary
@@ -188,6 +196,7 @@ erDiagram
 | id | BIGSERIAL | N | | PK |
 | blog_id | BIGINT | N | | FK → blogs. 작성자는 `blogs.user_id`로 찾아요 |
 | category_id | BIGINT | N | | FK → categories. 고르지 않으면 "미분류"를 넣어요 (임시저장 글도 마찬가지) |
+| topic_id | BIGINT | **Y** | | FK → topics. **NULL이면 "주제 없음"**이에요 (T-02). 바꿔도 `edited_at`은 갱신하지 않아요 |
 | title | VARCHAR(100) | **Y** | | 임시저장 때문에 NULL을 허용해요. **발행할 때 서비스에서 필수인지 검증하고, DB의 CHECK 제약으로도 보장해요** |
 | content | TEXT | **Y** | | 마크다운 원문 그대로 저장해요(sanitize는 화면에 보여줄 때 해요). 발행할 때 필수이고(CHECK 제약), **최대 100,000자**예요 (서비스 검증) |
 | summary | VARCHAR(200) | Y | | 카드 목록용 요약. 저장할 때 본문에서 마크다운 문법을 제거하고 앞부분으로 자동으로 만들어요 |
@@ -321,6 +330,44 @@ CONSTRAINT uk_reports_comment UNIQUE (comment_id, reporter_id)
 - **자기 글과 자기 댓글은 신고할 수 없어요** (R-01, R-04). 글은 `posts.blog_id → blogs.user_id`, 댓글은 `comments.user_id`가 `reporter_id`와 같으면 **400**으로 거부해요.
   - DB로 막지 않는 이유: 확인하려면 `reports → posts → blogs` 세 테이블을 봐야 해서 CHECK 제약으로는 표현할 수 없고, 트리거가 필요해요. 신고가 만들어지는 경로는 신고 API 하나뿐이라 **서비스 한 곳에서 검증하는 것이 명확하고 충분해요.**
 
+### 3.9 `topics` (토픽, 서비스 주제 분류)
+| 컬럼 | 타입 | NULL | 기본값 | 설명 |
+|---|---|---|---|---|
+| id | BIGSERIAL | N | | PK |
+| slug | VARCHAR(30) | N | | **UNIQUE.** URL용 영문 이름 (`?topic=travel`). 한 번 정하면 바꾸지 않아요 |
+| name | VARCHAR(30) | N | | **UNIQUE.** 화면에 보이는 이름 (예: 여행). 바꿔도 링크는 깨지지 않아요 |
+| display_order | INT | N | `0` | 메인 칩 순서 |
+
+- **서비스가 정한 고정 목록**이에요 (T-01). 사용자가 만드는 API는 없고, **Flyway 마이그레이션으로 초기 데이터를 넣고 바꿔요.**
+- 다른 테이블을 가리키지 않아요. 블로그나 회원에 속하지 않는 **서비스 전체의 분류**예요 (`tags`와 같은 성격이지만 목록이 고정이에요).
+- `posts.topic_id`는 NULL을 허용하고, 토픽 행은 MVP에서 삭제하지 않아요.
+
+**초기 데이터 (11개)**
+| slug | name | slug | name |
+|---|---|---|---|
+| `it` | IT·개발 | `movie` | 영화·드라마 |
+| `daily` | 일상 | `music` | 음악 |
+| `travel` | 여행 | `book` | 도서 |
+| `food` | 요리·맛집 | `pet` | 반려동물 |
+| `sports` | 스포츠 | `finance` | 경제·재테크 |
+| `game` | 게임 | | |
+
+```sql
+INSERT INTO topics (slug, name, display_order) VALUES
+ ('it', 'IT·개발', 1), ('daily', '일상', 2), ('travel', '여행', 3),
+ ('food', '요리·맛집', 4), ('sports', '스포츠', 5), ('game', '게임', 6),
+ ('movie', '영화·드라마', 7), ('music', '음악', 8), ('book', '도서', 9),
+ ('pet', '반려동물', 10), ('finance', '경제·재테크', 11);
+```
+
+**카테고리, 태그, 토픽 비교**
+| | 카테고리 | 태그 | 토픽 |
+|---|---|---|---|
+| 누가 만드나 | 블로그 주인 | 글쓴이 (자유) | **서비스 (고정)** |
+| 범위 | 블로그 안 | 서비스 전체 | 서비스 전체 |
+| 글당 개수 | 정확히 1개 | 0~10개 | 0~1개 |
+| 주로 쓰는 곳 | 블로그 사이드바 | 태그 모아보기 | 메인 토픽 칩 |
+
 ---
 
 ## 4. 인덱스
@@ -331,6 +378,7 @@ CONSTRAINT uk_reports_comment UNIQUE (comment_id, reporter_id)
 | posts | `(blog_id, status, published_at DESC)` | 블로그 홈 글 목록 (B-03) |
 | posts | `(blog_id, category_id, status, published_at DESC)` | 카테고리별 글 목록 (S-07) |
 | posts | `(published_at, like_count DESC)` | 인기 글 (S-02) |
+| posts | `(topic_id, status, visibility, published_at DESC)` | 메인 토픽 필터 (T-03) |
 | post_tags | `(tag_id)` | 태그 모아보기 (S-06) |
 | comments | `(post_id, parent_id, created_at)` | 글 상세의 댓글 목록 |
 | post_likes | `(post_id)` | 글 삭제 시 좋아요 함께 삭제 |
@@ -384,6 +432,7 @@ AND c.visibility = 'PUBLIC'   -- posts p JOIN categories c ON c.id = p.category_
 | 기능 | ERD 변경 |
 |---|---|
 | 다중 블로그 | 기존 테이블 구조와 데이터는 그대로예요. `blogs`에 주소용 `slug` 컬럼(NULL 허용)만 추가하고, 글과 카테고리의 FK는 이미 `blog_id`라서 옮길 필요가 없어요 |
+| 토픽 관리 | 스키마 변경 없음. 관리자 화면에서 `topics` 행을 추가하거나 이름을 바꿔요 (지금은 Flyway로 관리) |
 | 관리자, 신고 처리 | 스키마 변경 없음. `users.role`은 MVP부터 있으니 `ADMIN` 권한을 부여하고, `reports.status`를 `RESOLVED`/`REJECTED`로 바꿔요. 신고 시점 내용 보존이 필요하면 `reports`에 스냅샷 컬럼을 추가하고, 신고된 글의 삭제 정책(Soft Delete 등)도 함께 정해요 |
 | 구독, 알림 | `subscriptions`, `notifications` 테이블을 새로 만들어요 |
 | 조회수 중복 방지 | `post_views` 테이블 또는 Redis를 써요 |

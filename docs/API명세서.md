@@ -52,6 +52,7 @@
 | 6.6 | POST | `/api/posts` | 글 바로 발행 | 🔒 | P-01, P-02 |
 | 6.7 | PUT | `/api/posts/{postId}` | 발행 글 수정 | 👤 | P-04 |
 | 6.8 | DELETE | `/api/posts/{postId}` | 글 삭제 | 👤 | P-04 |
+| 6.9 | GET | `/api/topics` | 토픽 목록 | 🔓 | T-01 |
 | 7.1 | POST | `/api/drafts` | 처음 임시저장 | 🔒 | D-01, D-02 |
 | 7.2 | PUT | `/api/drafts/{postId}` | 다시 임시저장 (덮어쓰기) | 👤 | D-02 |
 | 7.3 | GET | `/api/drafts` | 임시저장 목록 | 🔒 | D-04 |
@@ -171,11 +172,13 @@
   "likeCount": 12,
   "publishedAt": "2026-10-06T14:30:00+09:00",
   "author": { "username": "nayoung", "nickname": "나영", "profileImageUrl": null },
+  "topic": { "id": 1, "slug": "it", "name": "IT·개발" },
   "visibility": "PUBLIC",
   "categoryVisibility": "PUBLIC"
 }
 ```
 - `thumbnailUrl`이 `null`이면 썸네일 없는 카드로 보여줘요(P-02).
+- `topic`은 `TopicItem`(2.4)이에요. `null`이면 "주제 없음"이라 카드에 토픽을 표시하지 않아요(T-04).
 - `visibility`와 `categoryVisibility`는 **블로그 주인이 자기 목록을 볼 때** 🔒 표시를 붙이는 데 써요. 방문자에게는 항상 둘 다 `PUBLIC`인 글만 와요.
 
 ### 2.3 `CategoryItem`
@@ -190,7 +193,13 @@
 }
 ```
 
-### 2.4 Enum 값
+### 2.4 `TopicItem`
+```json
+{ "id": 3, "slug": "travel", "name": "여행" }
+```
+- `slug`는 주소용 영문 이름이에요 (`?topic=travel`). 요청에서 글에 토픽을 지정할 때는 `topicId`를 써요.
+
+### 2.5 Enum 값
 | 이름 | 값 |
 |---|---|
 | `Visibility` | `PUBLIC`, `PRIVATE` |
@@ -219,6 +228,7 @@
 | `BLOG_NOT_FOUND` | 404 | 존재하지 않는 블로그예요. | 5.2 |
 | `CATEGORY_NOT_FOUND` | 404 | 존재하지 않는 카테고리예요. | 5.6, 5.7 |
 | `INVALID_CATEGORY` | 400 | 선택할 수 없는 카테고리예요. | 6.6, 6.7, 7.x (남의 블로그 카테고리 지정) |
+| `INVALID_TOPIC` | 400 | 존재하지 않는 토픽이에요. | 6.1 (`topic`), 6.6, 6.7, 7.x (`topicId`) |
 | `DUPLICATE_CATEGORY_NAME` | 409 | 같은 이름의 카테고리가 있어요. | 5.4, 5.6 |
 | `CATEGORY_LIMIT_EXCEEDED` | 400 | 카테고리는 최대 30개까지 만들 수 있어요. | 5.4 |
 | `DEFAULT_CATEGORY_NOT_DELETABLE` | 400 | 기본 카테고리는 삭제할 수 없어요. | 5.7 |
@@ -437,6 +447,7 @@
       "likeCount": 30,
       "publishedAt": "2026-10-04T09:12:00+09:00",
       "author": { "username": "minsu", "nickname": "민수", "profileImageUrl": null },
+      "topic": { "id": 3, "slug": "travel", "name": "여행" },
       "visibility": "PUBLIC",
       "categoryVisibility": "PUBLIC",
       "bookmarkedAt": "2026-10-05T21:40:00+09:00"
@@ -607,6 +618,7 @@
 | 파라미터 | 기본값 | 설명 |
 |---|---|---|
 | `sort` | `latest` | `latest`: 발행 최신순 / `popular`: **최근 7일**간 발행된 글 중 좋아요 많은 순(같으면 최신순) |
+| `topic` | | 토픽 `slug` (예: `travel`). 생략하면 전체 글이에요. `sort`와 함께 쓸 수 있어요 (T-03) |
 | `page`, `size` | 1, 12 | 1.5 참고 |
 
 **응답 `200 OK`**: 페이지 응답, `content`는 `PostCard[]`
@@ -621,6 +633,7 @@
       "likeCount": 12,
       "publishedAt": "2026-10-06T14:30:00+09:00",
       "author": { "username": "nayoung", "nickname": "나영", "profileImageUrl": null },
+      "topic": { "id": 1, "slug": "it", "name": "IT·개발" },
       "visibility": "PUBLIC",
       "categoryVisibility": "PUBLIC"
     }
@@ -629,7 +642,7 @@
 }
 ```
 
-**에러:** `INVALID_INPUT` (`sort` 값이 잘못됐을 때)
+**에러:** `INVALID_INPUT` (`sort` 값이 잘못됐을 때) · `INVALID_TOPIC` (없는 `topic` slug)
 
 ---
 
@@ -701,6 +714,7 @@
   "thumbnailUrl": "/uploads/2026/10/a81b9e.png",
   "visibility": "PUBLIC",
   "category": { "id": 2, "name": "개발", "visibility": "PUBLIC" },
+  "topic": { "id": 1, "slug": "it", "name": "IT·개발" },
   "tags": ["Java", "JPA", "Spring"],
   "author": { "username": "nayoung", "nickname": "나영", "profileImageUrl": null },
   "blog": { "id": 1, "name": "나영의 개발일지" },
@@ -738,6 +752,7 @@
   "content": "## 연관관계의 주인\n\n외래 키를 가진 쪽이 주인이에요...",
   "thumbnailUrl": null,
   "categoryId": 2,
+  "topicId": 1,
   "tags": ["Java", "jpa", "Spring", "java"],
   "visibility": "PUBLIC"
 }
@@ -748,6 +763,7 @@
 | `content` | ✅ | 공백 제외 1자 이상, 최대 100,000자 |
 | `thumbnailUrl` | | `null`이면 **본문의 첫 번째 이미지**를 자동으로 써요 |
 | `categoryId` | | `null`이면 "미분류". **내 블로그의 카테고리**만 가능해요 |
+| `topicId` | | `null`이면 "주제 없음". 6.9의 토픽 id만 가능해요 (T-02) |
 | `tags` | | 최대 10개, 태그당 20자, 한글·영문·숫자·`_`·`-`만. 대소문자 무시로 **중복은 합쳐요** (위 예시는 `Java`, `jpa`, `Spring` 3개가 돼요) |
 | `visibility` | | 생략하면 `PUBLIC` |
 
@@ -757,7 +773,7 @@
 ```
 > 프론트엔드는 `/@nayoung/posts/10`으로 이동해요.
 
-**에러:** `INVALID_INPUT` · `INVALID_CATEGORY`
+**에러:** `INVALID_INPUT` · `INVALID_CATEGORY` · `INVALID_TOPIC`
 
 ---
 
@@ -766,7 +782,7 @@
 
 요청 형식은 6.6과 같아요. 폼의 값을 **모두** 보내요.
 
-- **제목, 본문, 썸네일, 태그**가 실제로 바뀌었을 때만 `editedAt`이 갱신돼요. 카테고리 이동과 공개 범위 변경은 수정으로 보지 않아요(P-05).
+- **제목, 본문, 썸네일, 태그**가 실제로 바뀌었을 때만 `editedAt`이 갱신돼요. 카테고리 이동, 토픽 변경, 공개 범위 변경은 수정으로 보지 않아요(P-05, T-02).
 - 임시저장 글 id를 보내면 `POST_NOT_FOUND`예요(임시저장 글은 7.2로 수정해요).
 
 **응답 `200 OK`**
@@ -774,7 +790,7 @@
 { "id": 10, "username": "nayoung", "editedAt": "2026-10-07T09:00:00+09:00" }
 ```
 
-**에러:** `INVALID_INPUT` · `INVALID_CATEGORY` · `POST_NOT_FOUND` · `FORBIDDEN`
+**에러:** `INVALID_INPUT` · `INVALID_CATEGORY` · `INVALID_TOPIC` · `POST_NOT_FOUND` · `FORBIDDEN`
 
 ---
 
@@ -786,6 +802,23 @@
 **응답 `204 No Content`**
 
 **에러:** `POST_NOT_FOUND` · `FORBIDDEN`
+
+---
+
+### 6.9 토픽 목록
+`GET /api/topics` 🔓 · T-01
+
+메인의 토픽 칩과 글쓰기 화면의 토픽 선택 목록에 써요. `displayOrder` 순서예요. 목록이 거의 바뀌지 않아서 프론트엔드는 앱을 처음 열 때 한 번만 불러와도 돼요.
+
+**응답 `200 OK`**
+```json
+[
+  { "id": 1, "slug": "it", "name": "IT·개발" },
+  { "id": 2, "slug": "daily", "name": "일상" },
+  { "id": 3, "slug": "travel", "name": "여행" }
+]
+```
+> 실제 응답에는 11개가 모두 들어 있어요 (ERD 3.9 초기 데이터).
 
 ---
 
@@ -803,6 +836,7 @@
   "content": "쓰다 만 글...",
   "thumbnailUrl": null,
   "categoryId": null,
+  "topicId": null,
   "tags": [],
   "visibility": "PUBLIC"
 }
@@ -816,7 +850,7 @@
 ```
 > 프론트엔드는 받은 `id`를 기억했다가 다음 임시저장부터 7.2를 호출해요. 화면에는 "임시저장됨 (15:02)"을 보여줘요(D-07).
 
-**에러:** `INVALID_INPUT` · `INVALID_CATEGORY`
+**에러:** `INVALID_INPUT` · `INVALID_CATEGORY` · `INVALID_TOPIC`
 
 ---
 
@@ -825,7 +859,7 @@
 
 **요청**: 7.1과 같아요. **응답 `200 OK`**: 7.1과 같은 형태
 
-**에러:** `INVALID_INPUT` · `INVALID_CATEGORY` · `DRAFT_NOT_FOUND`
+**에러:** `INVALID_INPUT` · `INVALID_CATEGORY` · `INVALID_TOPIC` · `DRAFT_NOT_FOUND`
 
 ---
 
@@ -863,6 +897,7 @@
   "content": "쓰다 만 글...",
   "thumbnailUrl": null,
   "category": { "id": 1, "name": "미분류", "visibility": "PUBLIC" },
+  "topic": null,
   "tags": [],
   "visibility": "PUBLIC",
   "updatedAt": "2026-10-06T15:02:00+09:00"
@@ -893,7 +928,7 @@
 ```
 - `status`가 `PUBLISHED`로 바뀌고 `publishedAt`이 지금 시각으로 기록돼요. 글 id는 그대로예요.
 
-**에러:** `INVALID_INPUT` · `INVALID_CATEGORY` · `DRAFT_NOT_FOUND`
+**에러:** `INVALID_INPUT` · `INVALID_CATEGORY` · `INVALID_TOPIC` · `DRAFT_NOT_FOUND`
 
 ---
 
