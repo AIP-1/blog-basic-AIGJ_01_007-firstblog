@@ -298,20 +298,24 @@ CREATE UNIQUE INDEX uk_tags_name_lower ON tags (LOWER(name));
 | comment_id | BIGINT | **Y** | | FK → comments. **댓글 신고**일 때 채워요 (R-04) |
 | reporter_id | BIGINT | N | | FK → users |
 | reason | VARCHAR(20) | N | | `SPAM` / `ABUSE` / `ADULT` / `ETC` |
-| detail | VARCHAR(500) | Y | | `ETC`를 고를 때 적는 상세 사유 |
-| status | VARCHAR(20) | N | `'RECEIVED'` | 2차 관리자 처리를 대비한 컬럼이에요 |
+| detail | VARCHAR(500) | Y | | 상세 사유. **`reason = 'ETC'`이면 필수**예요 (CHECK 제약) |
+| status | VARCHAR(20) | N | `'RECEIVED'` | `RECEIVED`(접수) / `RESOLVED`(조치함) / `REJECTED`(문제없음). **MVP는 `RECEIVED`만** 써요. 나머지는 2차 관리자 기능에서 써요 |
 | created_at | TIMESTAMP | N | | |
 
 **글 신고와 댓글 신고를 한 테이블에서 관리해요**
 ```sql
 -- 신고 대상은 글 또는 댓글 중 정확히 하나
 CONSTRAINT ck_reports_one_target CHECK ((post_id IS NULL) <> (comment_id IS NULL)),
+-- "기타" 사유는 상세 사유 필수
+CONSTRAINT ck_reports_etc_detail CHECK (reason <> 'ETC' OR detail IS NOT NULL),
 -- 중복 신고 방지 (R-02)
 CONSTRAINT uk_reports_post    UNIQUE (post_id, reporter_id),
 CONSTRAINT uk_reports_comment UNIQUE (comment_id, reporter_id)
 ```
 - **CHECK 제약:** `post_id`와 `comment_id` 중 **딱 하나만** 채워져 있어야 해요. 둘 다 비거나 둘 다 채워지면 DB가 거부해요.
 - **UNIQUE 두 개:** PostgreSQL은 UNIQUE에서 NULL끼리는 서로 다른 값으로 봐요. 그래서 댓글 신고 행(`post_id`가 NULL)은 `uk_reports_post`에 걸리지 않고, 글 신고 행은 `uk_reports_comment`에 걸리지 않아요. 각자 자기 대상에 대해서만 중복을 막아요.
+- **`ck_reports_etc_detail`:** 같은 행 안의 규칙이라 CHECK로 막아요. 공백만 있는 상세 사유는 서비스 검증에서 막아요.
+- **이미 신고한 대상**을 다시 신고하면 UNIQUE 위반이 나기 전에 서비스에서 확인해서 **409**로 응답해요.
 - **한 테이블로 둔 이유:** 2차 관리자 화면에서 신고를 **한 목록**으로 처리할 수 있고, 사유와 처리 상태 같은 컬럼을 두 번 만들 필요가 없어요. FK도 그대로 유지돼요.
 - 신고할 수 없는 댓글: **자기 댓글**, `is_deleted = true`인 댓글, 볼 수 없는 글(ERD 4.1)의 댓글이에요 (서비스 검증).
 - **자기 글과 자기 댓글은 신고할 수 없어요** (R-01, R-04). 글은 `posts.blog_id → blogs.user_id`, 댓글은 `comments.user_id`가 `reporter_id`와 같으면 **400**으로 거부해요.
@@ -380,7 +384,7 @@ AND c.visibility = 'PUBLIC'   -- posts p JOIN categories c ON c.id = p.category_
 | 기능 | ERD 변경 |
 |---|---|
 | 다중 블로그 | 기존 테이블 구조와 데이터는 그대로예요. `blogs`에 주소용 `slug` 컬럼(NULL 허용)만 추가하고, 글과 카테고리의 FK는 이미 `blog_id`라서 옮길 필요가 없어요 |
-| 관리자, 신고 처리 | 스키마 변경 없음. `users.role`은 MVP부터 있으니 `ADMIN` 권한을 부여하고, `reports.status`에 처리 상태를 넣어요 |
+| 관리자, 신고 처리 | 스키마 변경 없음. `users.role`은 MVP부터 있으니 `ADMIN` 권한을 부여하고, `reports.status`를 `RESOLVED`/`REJECTED`로 바꿔요. 신고 시점 내용 보존이 필요하면 `reports`에 스냅샷 컬럼을 추가하고, 신고된 글의 삭제 정책(Soft Delete 등)도 함께 정해요 |
 | 구독, 알림 | `subscriptions`, `notifications` 테이블을 새로 만들어요 |
 | 조회수 중복 방지 | `post_views` 테이블 또는 Redis를 써요 |
 | 방문자 통계 | `blog_daily_visits` 테이블을 새로 만들어요 |
