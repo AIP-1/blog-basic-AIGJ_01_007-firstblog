@@ -186,20 +186,33 @@ erDiagram
 | id | BIGSERIAL | N | | PK |
 | blog_id | BIGINT | N | | FK → blogs. 작성자는 `blogs.user_id`로 찾아요 |
 | category_id | BIGINT | N | | FK → categories. 고르지 않으면 "미분류"를 넣어요 (임시저장 글도 마찬가지) |
-| title | VARCHAR(100) | **Y** | | 임시저장 때문에 NULL을 허용해요. **발행할 때 서비스에서 필수인지 검증해요** |
-| content | TEXT | **Y** | | 마크다운 원문. 발행할 때 필수인지 검증해요 |
+| title | VARCHAR(100) | **Y** | | 임시저장 때문에 NULL을 허용해요. **발행할 때 서비스에서 필수인지 검증하고, DB의 CHECK 제약으로도 보장해요** |
+| content | TEXT | **Y** | | 마크다운 원문 그대로 저장해요(sanitize는 화면에 보여줄 때 해요). 발행할 때 필수이고(CHECK 제약), **최대 100,000자**예요 (서비스 검증) |
 | summary | VARCHAR(200) | Y | | 카드 목록용 요약. 저장할 때 본문에서 마크다운 문법을 제거하고 앞부분으로 자동으로 만들어요 |
-| thumbnail_url | VARCHAR(500) | Y | | |
+| thumbnail_url | VARCHAR(500) | Y | | 직접 지정하지 않으면 **저장할 때 본문의 첫 번째 이미지 URL을 자동으로 넣어요.** 본문에도 이미지가 없으면 NULL이에요 |
 | status | VARCHAR(20) | N | `'DRAFT'` | `DRAFT` / `PUBLISHED` |
 | visibility | VARCHAR(20) | N | `'PUBLIC'` | `PUBLIC` / `PRIVATE`. 글 자체의 설정이에요. 실제 노출 여부는 카테고리의 공개 범위와 함께 판단해요 (4.1절) |
 | view_count | INT | N | `0` | 작성자 본인 조회는 제외해요 |
 | like_count | INT | N | `0` | 인기순 정렬용 비정규화 컬럼. 좋아요 추가나 취소와 **같은 트랜잭션**에서 바꿔요 |
 | published_at | TIMESTAMP | Y | | 처음 발행한 시각. 최신순 정렬과 "최근 7일" 기준이에요 |
-| edited_at | TIMESTAMP | Y | | **발행 후 내용을 수정한 시각.** 화면의 "수정일"이에요 (P-05). NULL이면 수정한 적이 없는 글이에요 |
+| edited_at | TIMESTAMP | Y | | **발행 후 내용을 수정한 시각.** 화면의 "수정일"이에요 (P-05). **제목, 본문, 썸네일, 태그가 바뀔 때만** 갱신해요 (카테고리 이동, 공개 범위 변경은 제외). NULL이면 수정한 적이 없는 글이에요 |
 | created_at | TIMESTAMP | N | | |
 | updated_at | TIMESTAMP | N | | 임시저장 목록은 이 값의 최신순으로 정렬해요 |
 
-> ⚠️ **`updated_at`을 수정일로 쓰지 않는 이유:** 조회수나 좋아요 수가 바뀔 때 `updated_at`이 갱신될 수 있어요. 그러면 읽기만 한 글도 "수정됨"으로 보이는 버그가 생겨요. 화면의 수정일은 `edited_at`만 써요.
+> ⚠️ **`updated_at`을 수정일로 쓰지 않는 이유:** 조회수나 좋아요 수가 바뀔 때 `updated_at`이 갱신될 수 있어요. 그러면 읽기만 한 글도 "수정됨"으로 보이는 버그가 생겨요. 화면의 수정일은 `edited_at`만 써요. 화면의 작성일은 `created_at`이 아니라 `published_at`(처음 발행한 시각)이에요.
+
+**CHECK 제약: 발행 글의 필수 값을 DB에서도 보장해요**
+```sql
+CONSTRAINT ck_posts_published_required CHECK (
+    status = 'DRAFT'
+    OR (title IS NOT NULL AND content IS NOT NULL AND published_at IS NOT NULL)
+)
+```
+- 임시저장 글(`DRAFT`)은 제목과 본문이 비어 있어도 돼요.
+- 발행 글(`PUBLISHED`)은 제목, 본문, 발행 시각이 **반드시** 있어야 해요. 서비스 코드에 버그가 있어도 DB가 저장을 거부해요.
+- 빈 문자열(`''`)은 NULL이 아니라서 이 제약에 걸리지 않아요. 공백만 있는 제목이나 본문은 **서비스 검증**에서 막아요.
+- 부분 인덱스처럼 JPA로는 만들 수 없어서 Flyway SQL로 만들어요.
+- 발행 글을 임시저장 상태로 되돌리는 기능(발행 취소)은 없어요 (P-04).
 
 ### 3.5 `tags` / `post_tags` (태그, N:M)
 | 테이블 | 컬럼 | 타입 | NULL | 설명 |
@@ -300,7 +313,7 @@ AND c.visibility = 'PUBLIC'   -- posts p JOIN categories c ON c.id = p.category_
 | **댓글 삭제** (C-01) | 답글이 있으면 `is_deleted = true`로 바꾸고 "삭제된 댓글입니다"로 표시해요. 답글이 없으면 Hard Delete해요 |
 | **좋아요 추가·취소** (C-03) | `post_likes`의 INSERT나 DELETE와 `posts.like_count ± 1`을 같은 트랜잭션에서 처리해요 |
 | **임시저장 글 발행** (D-05) | `status`를 `DRAFT`에서 `PUBLISHED`로 바꾸고 `published_at`을 기록해요. 필수 항목(제목, 본문, 카테고리)도 검증해요 |
-| **발행 글 수정** (P-04) | 제목, 본문, 썸네일, 태그, 카테고리, 공개 범위가 바뀌면 `edited_at`을 갱신해요 |
+| **발행 글 수정** (P-04) | **제목, 본문, 썸네일, 태그**가 바뀌면 `edited_at`을 갱신해요. 카테고리 이동과 공개 범위 변경은 내용 수정이 아니라서 갱신하지 않아요 |
 
 > FK 삭제 동작은 DB의 `ON DELETE CASCADE`에 기대지 않고 **서비스 계층에서 순서대로 삭제**해요. 삭제 순서와 `like_count` 보정을 코드에서 명확하게 관리하려는 거예요.
 
