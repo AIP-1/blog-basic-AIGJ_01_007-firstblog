@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: ownlog
+  config:
+    # 루트의 .env를 읽어요 (실행 위치가 루트든 backend든 동작하게 두 경로)
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ownlog}
+    username: ${DB_USERNAME:ownlog}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate      # 스키마는 Flyway가 만들고, JPA는 엔티티와 맞는지 검사만 해요
+    open-in-view: false       # DB 연결을 요청 끝까지 붙잡지 않아요
+  servlet:
+    multipart:
+      max-file-size: 5MB      # P-03 이미지 제한
+      max-request-size: 6MB
+
+ownlog:
+  jwt:
+    secret: ${JWT_SECRET}
+    access-token-validity: 2h # U-03
+  upload:
+    dir: ${UPLOAD_DIR:./uploads}

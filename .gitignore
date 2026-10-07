@@ -1,0 +1,17 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+
+# 환경 변수 (비밀번호, JWT 비밀키) → 절대 커밋 금지
+.env
+
+# 업로드된 이미지
+uploads/
+
+# Frontend (4단계)
+node_modules/
+dist/
