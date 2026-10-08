@@ -69,6 +69,22 @@ public class PostQueryService {
         return PostDetailResponse.of(post, viewCount, liked, bookmarked, isOwner);
     }
 
+    /**
+     * 이 사람이 볼 수 있는 발행 글인가 (댓글, 좋아요, 북마크, 신고가 함께 써요).
+     * 주인이면 비공개여도 OK, 아니면 공개 조건(ERD 4.1). 볼 수 없으면 존재를 숨기고 404.
+     */
+    @Transactional(readOnly = true)
+    public Post getViewablePost(Long postId, LoginUser me) {
+        Post post = postRepository.findById(postId)
+                .filter(Post::isPublished)
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+        boolean isOwner = me != null && post.isOwnedBy(me.id());
+        if (!isOwner && !post.isVisibleToPublic()) {
+            throw new BusinessException(ErrorCode.POST_NOT_FOUND);
+        }
+        return post;
+    }
+
     /** API 6.1 메인 최신·인기 (+ 토픽 필터) */
     @Transactional(readOnly = true)
     public PageResponse<PostCard> getMainPosts(String sort, String topicSlug, PageCondition page) {
