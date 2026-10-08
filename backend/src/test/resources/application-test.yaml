@@ -1,0 +1,4 @@
+# 테스트 전용 설정. .env가 없는 환경(CI 등)에서도 테스트가 돌아가게 해요.
+ownlog:
+  jwt:
+    secret: test-secret-key-for-ownlog-at-least-32-bytes-long
