@@ -271,8 +271,15 @@ CREATE UNIQUE INDEX uk_tags_name_lower ON tags (LOWER(name));
 - **형식:** 일반 텍스트만 저장하고 보여줄 때 escape해요. 마크다운과 HTML은 렌더링하지 않아요.
 - **조회:** 글 상세에서 한 번에 모두 불러와요. 일반 댓글은 오래된 순이고, 각 댓글 아래에 답글을 오래된 순으로 붙여요.
   ```sql
-  ORDER BY COALESCE(c.parent_id, c.id), c.parent_id NULLS FIRST, c.created_at
+  SELECT c.*, u.nickname, u.username, u.status          -- 작성자도 함께 가져와서 N+1을 막아요
+    FROM comments c JOIN users u ON u.id = c.user_id
+   WHERE c.post_id = ?
+   ORDER BY COALESCE(c.parent_id, c.id),   -- 같은 묶음(부모 + 답글)끼리, 묶음은 부모가 쓰인 순서로
+            c.parent_id NULLS FIRST,       -- 묶음 안에서 부모가 맨 앞
+            c.id                           -- 답글은 쓰인 순서로 (id는 자동 증가라 시각이 같아도 순서가 일정해요)
   ```
+  - **정렬은 SQL이 하고, Java는 결과를 위에서부터 한 번 훑으며 "부모면 새 묶음, 답글이면 직전 부모의 `replies`에 추가"만 해요.** 쿼리는 1번이에요.
+  - **2차 (댓글 페이지 나누기):** 위 쿼리에 `LIMIT`을 걸면 답글이 다음 페이지로 잘려요. 그때는 **부모 댓글만 `LIMIT`으로 나눠 조회**하고, 그 부모들의 답글은 `WHERE parent_id IN (...)`으로 한 번에 가져와요 (쿼리 2번).
 - `updated_at > created_at`이면 화면에 "(수정됨)"을 표시해요.
 
 ### 3.7 `post_likes` / `bookmarks` (좋아요, 북마크)
@@ -298,6 +305,11 @@ CREATE UNIQUE INDEX uk_tags_name_lower ON tags (LOWER(name));
   DELETE FROM post_likes WHERE user_id = ? AND post_id = ?;
   ```
   이미 누른 상태에서 또 누르기 요청이 오면 아무것도 바뀌지 않고 성공으로 응답해요.
+
+**동시성 규칙 (조회수, 좋아요 수 공통)**
+- 숫자는 **Java에서 계산하지 않고 DB가 더하게** 해요 (`SET like_count = like_count + 1`). JPA로 읽고 더해서 저장하면(변경 감지) 동시 요청에서 값이 사라져요 (Lost Update).
+- PostgreSQL은 같은 행을 고치려는 요청을 행 잠금으로 줄 세우고, 뒤 요청은 앞 요청이 바꾼 최신 값에 더해요. 그래서 동시에 와도 정확해요.
+- **3단계에서 동시성 테스트를 작성해요:** 쓰레드 100개가 서로 다른 사용자로 동시에 좋아요를 누르면 `like_count`가 정확히 100인지 확인해요.
 
 ### 3.8 `reports` (신고)
 | 컬럼 | 타입 | NULL | 기본값 | 설명 |
@@ -436,6 +448,6 @@ AND c.visibility = 'PUBLIC'   -- posts p JOIN categories c ON c.id = p.category_
 | 관리자, 신고 처리 | 스키마 변경 없음. `users.role`은 MVP부터 있으니 `ADMIN` 권한을 부여하고, `reports.status`를 `RESOLVED`/`REJECTED`로 바꿔요. 신고 시점 내용 보존이 필요하면 `reports`에 스냅샷 컬럼을 추가하고, 신고된 글의 삭제 정책(Soft Delete 등)도 함께 정해요 |
 | 구독, 알림 | `subscriptions`, `notifications` 테이블을 새로 만들어요 |
 | 조회수 중복 방지 | `post_views` 테이블 또는 Redis를 써요 |
-| 방문자 통계 (팀 DB의 `blog_daily_stat`, `UNIQUE(blog_id, stat_date)` 참고) | `blog_daily_visits` 테이블을 새로 만들어요 |
+| 방문자 통계 (팀 DB의 `blog_daily_stat`, `UNIQUE(blog_id, stat_date)` 참고) | 일별 통계 테이블을 새로 만들어요. **증가는 UPSERT**(`INSERT ... ON CONFLICT (blog_id, stat_date) DO UPDATE SET views = views + 1`)로 해서 동시 요청에도 정확하게 세요. 같은 행에 요청이 몰리면 **Redis `INCR`로 모았다가 주기적으로 DB에 반영**해요 (읽기와 초기화는 `GETDEL`처럼 한 명령으로, 서버가 여러 대면 반영 작업에 분산 잠금). **방문자 수는 중복 제거**가 필요해요 (Redis Set/HyperLogLog 또는 방문 기록 테이블의 UNIQUE). **날짜는 한국 시간(`Asia/Seoul`) 기준**으로 계산해요 (UTC로 계산하면 오전 0~9시 방문이 전날로 잡혀요) |
 | Refresh Token | `refresh_tokens` 테이블 또는 Redis를 써요 |
 | 이미지 정리 (팀 DB의 `post_image(post_id, storage_key)` 참고) | `uploaded_files` 테이블로 어디에서도 쓰지 않는 이미지를 추적해요 |
