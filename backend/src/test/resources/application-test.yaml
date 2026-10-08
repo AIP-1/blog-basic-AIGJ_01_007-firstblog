@@ -2,3 +2,13 @@
 ownlog:
   jwt:
     secret: test-secret-key-for-ownlog-at-least-32-bytes-long
+
+# N+1 검증용: 실행된 SQL 수를 셀 수 있게 Hibernate 통계를 켜요 (테스트에서만)
+spring:
+  jpa:
+    properties:
+      hibernate:
+        generate_statistics: true
+logging:
+  level:
+    org.hibernate.engine.internal.StatisticalLoggingSessionEventListener: WARN
