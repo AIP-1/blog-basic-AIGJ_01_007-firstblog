@@ -1,13 +1,20 @@
 package com.ownlog.user.service;
 
-import com.ownlog.blog.domain.Blog;
-import com.ownlog.blog.repository.BlogRepository;
+import com.ownlog.blog.service.BlogService;
 import com.ownlog.global.error.BusinessException;
 import com.ownlog.global.error.ErrorCode;
+import com.ownlog.global.storage.ImageDeleteEvent;
 import com.ownlog.user.domain.User;
 import com.ownlog.user.dto.MeResponse;
+import com.ownlog.user.dto.PasswordChangeRequest;
+import com.ownlog.user.dto.ProfileUpdateRequest;
+import com.ownlog.user.dto.WithdrawRequest;
 import com.ownlog.user.repository.UserRepository;
+import com.ownlog.user.repository.WithdrawalCleaner;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,15 +23,68 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final BlogRepository blogRepository;
+    private final BlogService blogService;
+    private final PasswordEncoder passwordEncoder;
+    private final WithdrawalCleaner withdrawalCleaner;
+    private final ApplicationEventPublisher eventPublisher;
 
     /** API 4.4 내 정보 */
     @Transactional(readOnly = true)
     public MeResponse getMe(Long userId) {
-        User user = userRepository.findById(userId)
+        return MeResponse.of(getUser(userId), blogService.getMyBlog(userId));
+    }
+
+    /** API 4.5 프로필 수정. 사진을 바꾸거나 지우면 예전 파일은 커밋 후에 삭제해요 */
+    @Transactional
+    public MeResponse updateProfile(Long userId, ProfileUpdateRequest request) {
+        User user = getUser(userId);
+        String oldImage = user.getProfileImageUrl();
+
+        user.updateProfile(request.nickname().strip(), request.normalizedBio(), request.profileImageUrl());
+
+        if (oldImage != null && !oldImage.equals(request.profileImageUrl())) {
+            eventPublisher.publishEvent(new ImageDeleteEvent(oldImage));
+        }
+        return MeResponse.of(user, blogService.getMyBlog(userId));
+    }
+
+    /** API 4.6 비밀번호 변경. 현재 비밀번호가 틀리면 401이 아니라 400 (401이면 프론트엔드가 로그아웃시켜요) */
+    @Transactional
+    public void changePassword(Long userId, PasswordChangeRequest request) {
+        User user = getUser(userId);
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            throw new BusinessException(ErrorCode.WRONG_PASSWORD);
+        }
+        if (!request.newPassword().equals(request.newPasswordConfirm())) {
+            throw new BusinessException(ErrorCode.PASSWORD_CONFIRM_MISMATCH);
+        }
+        user.changePassword(passwordEncoder.encode(request.newPassword()));
+    }
+
+    /**
+     * API 4.7 탈퇴 (U-06). 전부 한 트랜잭션이라 중간에 실패하면 아무것도 지워지지 않아요.
+     * 남의 글에 단 내 댓글과 내가 한 신고는 남아요 (댓글은 "탈퇴한 사용자"로 보여요).
+     */
+    @Transactional
+    public void withdraw(Long userId, WithdrawRequest request) {
+        User user = getUser(userId);
+        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+            throw new BusinessException(ErrorCode.WRONG_PASSWORD);
+        }
+        String oldImage = user.getProfileImageUrl();
+
+        withdrawalCleaner.deleteBlogsOf(userId);       // ① 내 블로그의 글(+ 딸린 것), 카테고리, 블로그
+        withdrawalCleaner.deleteLikesOf(userId);       // ② 남의 글에 누른 내 좋아요 + like_count 보정
+        withdrawalCleaner.deleteBookmarksOf(userId);   // ③ 내 북마크
+        user.withdraw(passwordEncoder.encode(UUID.randomUUID().toString()));   // ④ 개인정보 익명화 + DELETED
+
+        if (oldImage != null) {
+            eventPublisher.publishEvent(new ImageDeleteEvent(oldImage));       // ⑤ 커밋 후 프로필 사진 삭제
+        }
+    }
+
+    private User getUser(Long userId) {
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-        Blog blog = blogRepository.findFirstByUserIdOrderByIdAsc(userId)
-                .orElseThrow(() -> new IllegalStateException("블로그가 없는 회원: " + userId));
-        return MeResponse.of(user, blog);
     }
 }

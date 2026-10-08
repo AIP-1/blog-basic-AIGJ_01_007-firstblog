@@ -1,5 +1,6 @@
 package com.ownlog.auth.dto;
 
+import com.ownlog.user.domain.PasswordPolicy;
 import com.ownlog.user.domain.UsernamePolicy;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -14,8 +15,7 @@ public record SignupRequest(
         String email,
 
         @NotBlank(message = "비밀번호를 입력해 주세요.")
-        @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).{8,64}$",
-                message = "비밀번호는 8~64자이고 영문과 숫자를 포함해야 해요.")
+        @Pattern(regexp = PasswordPolicy.REGEX, message = PasswordPolicy.MESSAGE)
         String password,
 
         @NotBlank(message = "비밀번호 확인을 입력해 주세요.")
