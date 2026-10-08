@@ -1,0 +1,159 @@
+package com.ownlog.post.domain;
+
+import com.ownlog.blog.domain.Blog;
+import com.ownlog.category.domain.Category;
+import com.ownlog.global.common.Visibility;
+import com.ownlog.global.entity.BaseTimeEntity;
+import com.ownlog.global.util.MarkdownText;
+import com.ownlog.tag.domain.Tag;
+import com.ownlog.topic.domain.Topic;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+/** 글과 임시저장 글 (ERD 3.4). status로 구분해요. */
+@Getter
+@Entity
+@Table(name = "posts")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Post extends BaseTimeEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "blog_id", nullable = false)
+    private Blog blog;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "topic_id")   // null = 주제 없음 (T-02)
+    private Topic topic;
+
+    @Column(length = 100)
+    private String title;
+
+    @Column(columnDefinition = "text")
+    private String content;
+
+    @Column(length = 200)
+    private String summary;
+
+    @Column(length = 500)
+    private String thumbnailUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private PostStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Visibility visibility;
+
+    /**
+     * DB가 직접 더해요 (SET view_count = view_count + 1).
+     * Hibernate는 수정할 때 모든 컬럼을 UPDATE해서, 막지 않으면 예전 값으로 덮어써요 (Lost Update).
+     */
+    @Column(nullable = false, insertable = false, updatable = false)
+    private int viewCount;
+
+    @Column(nullable = false, insertable = false, updatable = false)
+    private int likeCount;
+
+    /** 화면의 작성일 (처음 발행한 시각) */
+    private Instant publishedAt;
+
+    /** 화면의 수정일 (발행 후 제목·본문·썸네일·태그를 바꾼 시각) */
+    private Instant editedAt;
+
+    @ManyToMany
+    @JoinTable(name = "post_tags",
+            joinColumns = @JoinColumn(name = "post_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id"))
+    private Set<Tag> tags = new HashSet<>();
+
+    /** 바로 발행 (P-01) */
+    public static Post publish(Blog blog, Category category, Topic topic, String title, String content,
+                               String thumbnailUrl, Visibility visibility, Set<Tag> tags) {
+        Post post = new Post();
+        post.blog = blog;
+        post.status = PostStatus.PUBLISHED;
+        post.publishedAt = Instant.now();
+        post.apply(category, topic, title, content, thumbnailUrl, visibility, tags);
+        return post;
+    }
+
+    /** 발행 글 수정 (P-04). 제목·본문·썸네일·태그가 바뀌었을 때만 수정일을 갱신해요 (P-05) */
+    public void edit(Category category, Topic topic, String title, String content,
+                     String thumbnailUrl, Visibility visibility, Set<Tag> tags) {
+        boolean contentChanged = !Objects.equals(this.title, title)
+                || !Objects.equals(this.content, content)
+                || !Objects.equals(this.thumbnailUrl, resolveThumbnail(thumbnailUrl, content))
+                || !tagNames(this.tags).equals(tagNames(tags));
+
+        // 카테고리·토픽·공개 범위만 바뀐 건 수정으로 보지 않아요
+        apply(category, topic, title, content, thumbnailUrl, visibility, tags);
+        if (contentChanged) {
+            this.editedAt = Instant.now();
+        }
+    }
+
+    private void apply(Category category, Topic topic, String title, String content,
+                       String thumbnailUrl, Visibility visibility, Set<Tag> tags) {
+        this.category = category;
+        this.topic = topic;
+        this.title = title;
+        this.content = content;
+        this.summary = MarkdownText.summarize(content);               // 카드용 요약 (저장할 때 한 번만)
+        this.thumbnailUrl = resolveThumbnail(thumbnailUrl, content);  // 없으면 본문 첫 이미지 (P-02)
+        this.visibility = visibility;
+        this.tags.clear();
+        this.tags.addAll(tags);
+    }
+
+    private static String resolveThumbnail(String thumbnailUrl, String content) {
+        return thumbnailUrl != null ? thumbnailUrl : MarkdownText.firstImageUrl(content);
+    }
+
+    private static Set<String> tagNames(Set<Tag> tags) {
+        return tags.stream()
+                .map(tag -> tag.getName().toLowerCase(Locale.ROOT))
+                .collect(Collectors.toSet());
+    }
+
+    public boolean isOwnedBy(Long userId) {
+        return blog.isOwnedBy(userId);
+    }
+
+    public boolean isPublished() {
+        return status == PostStatus.PUBLISHED;
+    }
+
+    /** 방문자가 볼 수 있는 글인가 (ERD 4.1): 발행 + 글 공개 + 카테고리 공개 */
+    public boolean isVisibleToPublic() {
+        return isPublished() && visibility == Visibility.PUBLIC && !category.isPrivate();
+    }
+}

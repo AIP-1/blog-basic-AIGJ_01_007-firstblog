@@ -36,7 +36,7 @@ public class GlobalExceptionHandler {
     /** 서비스 규칙 위반 (가장 많이 쓰여요) */
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusiness(BusinessException e) {
-        return toResponse(e.getErrorCode(), List.of());
+        return toResponse(e.getErrorCode(), e.getFieldErrors());
     }
 
     /** @Valid @RequestBody 검증 실패 → 어느 입력칸이 틀렸는지 fieldErrors로 알려줘요 */
