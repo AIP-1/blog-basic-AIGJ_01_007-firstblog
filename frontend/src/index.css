@@ -3,3 +3,23 @@
 body {
   @apply bg-gray-50 text-gray-900;
 }
+
+/* 마크다운 본문 스타일 (글 상세, 편집기 미리보기) */
+.markdown {
+  @apply leading-7 text-gray-800 break-words;
+}
+.markdown h1 { @apply mt-8 mb-4 text-2xl font-bold; }
+.markdown h2 { @apply mt-8 mb-3 text-xl font-bold; }
+.markdown h3 { @apply mt-6 mb-2 text-lg font-semibold; }
+.markdown p { @apply my-4; }
+.markdown a { @apply text-indigo-600 underline; }
+.markdown ul { @apply my-4 list-disc pl-6; }
+.markdown ol { @apply my-4 list-decimal pl-6; }
+.markdown blockquote { @apply my-4 border-l-4 border-gray-300 pl-4 text-gray-600; }
+.markdown code { @apply rounded bg-gray-100 px-1 py-0.5 text-sm; }
+.markdown pre { @apply my-4 overflow-x-auto rounded-md bg-gray-900 p-4 text-gray-100; }
+.markdown pre code { @apply bg-transparent p-0 text-gray-100; }
+.markdown img { @apply my-4 max-w-full rounded-md; }
+.markdown hr { @apply my-8 border-gray-200; }
+.markdown table { @apply my-4 block overflow-x-auto; }
+.markdown th, .markdown td { @apply border border-gray-200 px-3 py-1.5; }
