@@ -24,7 +24,8 @@ export default function PostDetailPage() {
   const requireLogin = useRequireLogin()
   const [reporting, setReporting] = useState(false)
 
-  if (!username || status === 404) return <NotFoundPage message="존재하지 않는 글이에요" />
+  if (!username) return <NotFoundPage />
+  if (status === 404) return <NotFoundPage message="존재하지 않는 글이에요" />
   if (loading) return <p className="py-16 text-center text-gray-500">불러오는 중…</p>
   if (error) return <p className="py-16 text-center text-red-600">{error}</p>
 

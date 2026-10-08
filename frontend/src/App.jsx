@@ -3,12 +3,15 @@ import { Route, Routes } from 'react-router'
 import RequireAuth from './auth/RequireAuth'
 import Layout from './components/Layout'
 import BlogPage from './pages/BlogPage'
+import BookmarksPage from './pages/BookmarksPage'
+import CategorySettingsPage from './pages/CategorySettingsPage'
 import DraftsPage from './pages/DraftsPage'
 import LoginPage from './pages/LoginPage'
 import MainPage from './pages/MainPage'
 import NotFoundPage from './pages/NotFoundPage'
 import PostDetailPage from './pages/PostDetailPage'
 import SearchPage from './pages/SearchPage'
+import SettingsPage from './pages/SettingsPage'
 import SignupPage from './pages/SignupPage'
 import TagPage from './pages/TagPage'
 
@@ -33,7 +36,9 @@ export default function App() {
         <Route path="/write" element={<RequireAuth><Suspense fallback={loadingFallback}><WritePage /></Suspense></RequireAuth>} />
         <Route path="/write/:postId" element={<RequireAuth><Suspense fallback={loadingFallback}><WritePage /></Suspense></RequireAuth>} />
         <Route path="/drafts" element={<RequireAuth><DraftsPage /></RequireAuth>} />
-        {/* 다음 작업: 🔒 /settings, /settings/categories, /bookmarks */}
+        <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
+        <Route path="/settings/categories" element={<RequireAuth><CategorySettingsPage /></RequireAuth>} />
+        <Route path="/bookmarks" element={<RequireAuth><BookmarksPage /></RequireAuth>} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

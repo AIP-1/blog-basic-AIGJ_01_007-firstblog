@@ -20,7 +20,8 @@ export default function BlogPage() {
   const sidebar = useAsync(() => getSidebar(username), `${username}|${viewer}`)
   const posts = useAsync(() => getBlogPosts(username, { categoryId, page }), `${username}|${categoryId}|${page}|${viewer}`)
 
-  if (!username || home.status === 404) return <NotFoundPage message="존재하지 않는 블로그예요" />
+  if (!username) return <NotFoundPage /> // @로 시작하지 않으면 블로그 주소가 아니에요
+  if (home.status === 404) return <NotFoundPage message="존재하지 않는 블로그예요" />
   if (home.loading) return <p className="py-16 text-center text-gray-500">불러오는 중…</p>
   if (home.error) return <p className="py-16 text-center text-red-600">{home.error}</p>
 

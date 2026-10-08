@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { startTransition, useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { api, setUnauthorizedHandler, tokenStorage } from '../api/client'
 import { AuthContext } from './authContext'
@@ -43,10 +43,15 @@ export default function AuthProvider({ children }) {
     [loadMe],
   )
 
-  /** 로그아웃은 토큰을 지우는 것뿐이에요 (U-03, 서버 API 없음) */
+  /**
+   * 로그아웃은 토큰을 지우는 것뿐이에요 (U-03, 서버 API 없음).
+   * React Router는 화면 이동을 startTransition(낮은 우선순위)으로 처리해요. user만 먼저 null이 되면
+   * 아직 보호 화면(/settings 등)이 그려지면서 RequireAuth가 로그인 화면으로 보내 버려요.
+   * 그래서 같은 우선순위로 바꿔서 "이동 + 로그아웃"이 한 번에 반영되게 해요.
+   */
   const logout = useCallback(() => {
     tokenStorage.clear()
-    setUser(null)
+    startTransition(() => setUser(null))
   }, [])
 
   return (
