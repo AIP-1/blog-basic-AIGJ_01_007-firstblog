@@ -49,6 +49,12 @@ public class BlogService {
         return blog;
     }
 
+    /** 내 블로그 (MVP는 1인 1블로그). 가입이 한 트랜잭션이라 없으면 버그예요 */
+    public Blog getMyBlog(Long userId) {
+        return blogRepository.findFirstByUserIdOrderByIdAsc(userId)
+                .orElseThrow(() -> new IllegalStateException("블로그가 없는 회원: " + userId));
+    }
+
     public boolean isOwner(Blog blog, LoginUser me) {
         return me != null && blog.isOwnedBy(me.id());
     }

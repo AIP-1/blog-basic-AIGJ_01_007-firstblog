@@ -7,6 +7,7 @@ import static com.ownlog.post.repository.PostCardQueries.PUBLIC_CONDITION;
 import static com.ownlog.post.repository.PostCardQueries.SELECT_CARD;
 
 import com.ownlog.post.domain.Post;
+import com.ownlog.post.dto.DraftItemRow;
 import com.ownlog.post.dto.PostCardRow;
 import java.time.Instant;
 import java.util.Optional;
@@ -69,6 +70,19 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query(value = SELECT_CARD + FROM_CARD + BLOG_OWNER_WHERE + LATEST,
             countQuery = COUNT + FROM_CARD + BLOG_OWNER_WHERE)
     Page<PostCardRow> findBlogPostsForOwner(Long blogId, Long categoryId, Pageable pageable);
+
+    /** 7.3 임시저장 목록: 내 블로그의 DRAFT만, 최근 저장 순 (본문은 읽지 않아요) */
+    @Query(value = """
+            select new com.ownlog.post.dto.DraftItemRow(p.id, p.title, p.summary, p.updatedAt)
+              from Post p
+             where p.blog.id = :blogId and p.status = com.ownlog.post.domain.PostStatus.DRAFT
+             order by p.updatedAt desc, p.id desc
+            """,
+            countQuery = """
+            select count(p) from Post p
+             where p.blog.id = :blogId and p.status = com.ownlog.post.domain.PostStatus.DRAFT
+            """)
+    Page<DraftItemRow> findDrafts(Long blogId, Pageable pageable);
 
     /** 상세 조회: 글과 함께 필요한 연관 엔티티를 한 번의 쿼리로 가져와요 (N+1 방지) */
     @Query("""

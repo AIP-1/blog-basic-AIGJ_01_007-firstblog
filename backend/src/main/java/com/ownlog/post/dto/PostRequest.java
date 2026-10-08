@@ -23,9 +23,11 @@ public record PostRequest(
         Long categoryId,   // null → "미분류"
         Long topicId,      // null → 주제 없음
 
-        List<@Pattern(regexp = "^\\s*[가-힣a-zA-Z0-9_-]{1,20}\\s*$",
-                message = "태그는 한글, 영문, 숫자, _, -만 쓸 수 있고 20자 이하예요.") String> tags,
+        List<@Pattern(regexp = TAG_REGEX, message = TAG_MESSAGE) String> tags,
 
         Visibility visibility   // null → PUBLIC
 ) {
+    /** 태그 규칙 (8장 입력 규칙). 임시저장 요청(DraftRequest)도 같은 규칙을 써요 */
+    public static final String TAG_REGEX = "^\\s*[가-힣a-zA-Z0-9_-]{1,20}\\s*$";
+    public static final String TAG_MESSAGE = "태그는 한글, 영문, 숫자, _, -만 쓸 수 있고 20자 이하예요.";
 }

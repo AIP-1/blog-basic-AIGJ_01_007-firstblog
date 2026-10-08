@@ -106,6 +106,38 @@ public class Post extends BaseTimeEntity {
         return post;
     }
 
+    /** 처음 임시저장 (D-01). 제목과 본문이 비어 있어도 돼요 (D-03) */
+    public static Post createDraft(Blog blog, Category category, Topic topic, String title, String content,
+                                   String thumbnailUrl, Visibility visibility, Set<Tag> tags) {
+        Post post = new Post();
+        post.blog = blog;
+        post.status = PostStatus.DRAFT;
+        post.apply(category, topic, title, content, thumbnailUrl, visibility, tags);
+        return post;
+    }
+
+    /** 다시 임시저장: 덮어써요 (D-02) */
+    public void saveDraft(Category category, Topic topic, String title, String content,
+                          String thumbnailUrl, Visibility visibility, Set<Tag> tags) {
+        requireDraft();
+        apply(category, topic, title, content, thumbnailUrl, visibility, tags);
+    }
+
+    /** 임시저장 글 발행 (D-05): 화면의 최신 내용을 저장하면서 발행해요. 작성일은 발행한 시각이에요 */
+    public void publishDraft(Category category, Topic topic, String title, String content,
+                             String thumbnailUrl, Visibility visibility, Set<Tag> tags) {
+        requireDraft();
+        apply(category, topic, title, content, thumbnailUrl, visibility, tags);
+        this.status = PostStatus.PUBLISHED;
+        this.publishedAt = Instant.now();
+    }
+
+    private void requireDraft() {
+        if (status != PostStatus.DRAFT) {
+            throw new IllegalStateException("임시저장 글이 아니에요: " + id);   // 서비스가 먼저 걸러서 생길 수 없는 상황
+        }
+    }
+
     /** 발행 글 수정 (P-04). 제목·본문·썸네일·태그가 바뀌었을 때만 수정일을 갱신해요 (P-05) */
     public void edit(Category category, Topic topic, String title, String content,
                      String thumbnailUrl, Visibility visibility, Set<Tag> tags) {

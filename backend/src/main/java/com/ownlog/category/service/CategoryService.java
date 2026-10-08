@@ -67,9 +67,8 @@ public class CategoryService {
             throw new BusinessException(ErrorCode.DUPLICATE_CATEGORY_NAME);
         }
         int order = categoryRepository.findMaxDisplayOrder(blogId) + 1;
-        Visibility visibility = request.visibility() != null ? request.visibility() : Visibility.PUBLIC;
-
-        Category saved = categoryRepository.save(Category.create(blog, name, order, visibility));
+        Category saved = categoryRepository.save(
+                Category.create(blog, name, order, Visibility.orPublic(request.visibility())));
         return CategoryItem.of(saved, 0L);
     }
 
@@ -118,6 +117,17 @@ public class CategoryService {
         categoryRepository.delete(category);
 
         return new CategoryDeleteResponse(moved, defaultCategory.getId());
+    }
+
+    /** 글·임시저장 글에 지정할 카테고리. null이면 "미분류", 내 블로그의 카테고리가 아니면 INVALID_CATEGORY */
+    public Category getCategoryForPost(Blog blog, Long categoryId) {
+        if (categoryId == null) {
+            return categoryRepository.findByBlogIdAndIsDefaultTrue(blog.getId())
+                    .orElseThrow(() -> new IllegalStateException("기본 카테고리가 없는 블로그: " + blog.getId()));
+        }
+        return categoryRepository.findById(categoryId)
+                .filter(category -> category.getBlog().getId().equals(blog.getId()))
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CATEGORY));
     }
 
     /** 남의 공개 카테고리 → 403, 남의 비공개 카테고리 → 404 (존재 여부를 숨겨요) */

@@ -1,9 +1,8 @@
 package com.ownlog.post.service;
 
 import com.ownlog.blog.domain.Blog;
-import com.ownlog.blog.repository.BlogRepository;
-import com.ownlog.category.domain.Category;
-import com.ownlog.category.repository.CategoryRepository;
+import com.ownlog.blog.service.BlogService;
+import com.ownlog.category.service.CategoryService;
 import com.ownlog.global.common.Visibility;
 import com.ownlog.global.error.BusinessException;
 import com.ownlog.global.error.ErrorCode;
@@ -25,21 +24,20 @@ import org.springframework.transaction.annotation.Transactional;
 public class PostService {
 
     private final PostRepository postRepository;
-    private final BlogRepository blogRepository;
-    private final CategoryRepository categoryRepository;
+    private final BlogService blogService;
+    private final CategoryService categoryService;
     private final TopicService topicService;
     private final TagService tagService;
 
     /** API 6.6 바로 발행. 블로그는 토큰의 회원으로 정해요 (요청에 blogId 없음) */
     @Transactional
     public PostCreateResponse create(LoginUser me, PostRequest request) {
-        Blog blog = blogRepository.findFirstByUserIdOrderByIdAsc(me.id())
-                .orElseThrow(() -> new IllegalStateException("블로그가 없는 회원: " + me.id()));
+        Blog blog = blogService.getMyBlog(me.id());
         Post post = postRepository.save(Post.publish(blog,
-                resolveCategory(blog, request.categoryId()),
+                categoryService.getCategoryForPost(blog, request.categoryId()),
                 topicService.getTopicOrNull(request.topicId()),
                 request.title().strip(), request.content(), request.thumbnailUrl(),
-                visibilityOrDefault(request.visibility()),
+                Visibility.orPublic(request.visibility()),
                 tagService.resolveTags(request.tags())));
         return new PostCreateResponse(post.getId(), me.username());
     }
@@ -48,10 +46,10 @@ public class PostService {
     @Transactional
     public PostUpdateResponse update(Long postId, LoginUser me, PostRequest request) {
         Post post = getPostForOwner(postId, me);
-        post.edit(resolveCategory(post.getBlog(), request.categoryId()),
+        post.edit(categoryService.getCategoryForPost(post.getBlog(), request.categoryId()),
                 topicService.getTopicOrNull(request.topicId()),
                 request.title().strip(), request.content(), request.thumbnailUrl(),
-                visibilityOrDefault(request.visibility()),
+                Visibility.orPublic(request.visibility()),
                 tagService.resolveTags(request.tags()));
         return new PostUpdateResponse(post.getId(), me.username(), KstTime.of(post.getEditedAt()));
     }
@@ -80,20 +78,5 @@ public class PostService {
             throw new BusinessException(post.isVisibleToPublic() ? ErrorCode.FORBIDDEN : ErrorCode.POST_NOT_FOUND);
         }
         return post;
-    }
-
-    /** null이면 "미분류". 내 블로그의 카테고리가 아니면 INVALID_CATEGORY */
-    private Category resolveCategory(Blog blog, Long categoryId) {
-        if (categoryId == null) {
-            return categoryRepository.findByBlogIdAndIsDefaultTrue(blog.getId())
-                    .orElseThrow(() -> new IllegalStateException("기본 카테고리가 없는 블로그: " + blog.getId()));
-        }
-        return categoryRepository.findById(categoryId)
-                .filter(category -> category.getBlog().getId().equals(blog.getId()))
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CATEGORY));
-    }
-
-    private Visibility visibilityOrDefault(Visibility visibility) {
-        return visibility != null ? visibility : Visibility.PUBLIC;
     }
 }
