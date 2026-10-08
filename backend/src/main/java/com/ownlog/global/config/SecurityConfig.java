@@ -53,6 +53,9 @@ public class SecurityConfig {
                                 "/uploads/**").permitAll()
                         // 예외가 나면 Spring이 /error로 보내요. 막혀 있으면 진짜 에러가 401로 가려져요
                         .requestMatchers("/error").permitAll()
+                        // API가 아닌 주소는 React 화면(index.html, /assets/**, /@아이디 같은 화면 주소)이라 누구나 받을 수 있어요.
+                        // 화면 안에서 필요한 권한은 각 API가 다시 확인해요
+                        .requestMatchers(request -> !request.getRequestURI().startsWith("/api/")).permitAll()
                         // 🔒 나머지는 모두 로그인 필요 (👤 주인 확인은 서비스에서)
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtAuthenticationFilter(tokenProvider, userRepository),

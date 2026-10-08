@@ -1,0 +1,21 @@
+# 운영(배포) 설정. SPRING_PROFILES_ACTIVE=prod일 때 application.yaml 위에 덮어써요.
+# 값은 모두 환경변수로 받아요 (GitHub Actions secrets → 서버의 docker run -e).
+spring:
+  datasource:
+    # 수업 DB(crowfoot)는 스키마가 따로 있어서, 연결할 때 기본 스키마를 지정해요.
+    # 그러면 코드의 SQL(네이티브 쿼리 포함)이 스키마 이름 없이도 그 스키마의 테이블을 찾아요.
+    url: jdbc:postgresql://${DB_ADDRESS}:${DB_PORT}/${DB_NAME}?currentSchema=${DB_SCHEMA}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  flyway:
+    # 마이그레이션(V1)과 기록 테이블도 같은 스키마에 만들어요
+    default-schema: ${DB_SCHEMA}
+    schemas: ${DB_SCHEMA}
+
+server:
+  # 서버의 Nginx 뒤에서 동작해요. X-Forwarded-* 헤더로 원래 주소(https, 도메인)를 알아요
+  forward-headers-strategy: framework
+
+ownlog:
+  upload:
+    dir: /app/uploads   # docker run -v로 서버 폴더를 연결해서 컨테이너를 새로 띄워도 이미지가 남아요
