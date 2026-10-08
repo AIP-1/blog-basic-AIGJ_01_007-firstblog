@@ -101,6 +101,21 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query(value = "UPDATE posts SET view_count = view_count + 1 WHERE id = :postId", nativeQuery = true)
     void increaseViewCount(Long postId);
 
+    /** 좋아요 수 +1 (ERD 3.7). DB가 직접 더해서 동시에 눌러도 정확해요 */
+    @Modifying
+    @Query(value = "UPDATE posts SET like_count = like_count + 1 WHERE id = :postId", nativeQuery = true)
+    void increaseLikeCount(Long postId);
+
+    /** 좋아요 수 -1. 0 아래로 내려가지 않게 막아요 (방어용) */
+    @Modifying
+    @Query(value = "UPDATE posts SET like_count = like_count - 1 WHERE id = :postId AND like_count > 0",
+            nativeQuery = true)
+    void decreaseLikeCount(Long postId);
+
+    /** 방금 바뀐 좋아요 수 (메모리의 엔티티는 바뀌기 전 값이라 DB에서 다시 읽어요) */
+    @Query(value = "SELECT like_count FROM posts WHERE id = :postId", nativeQuery = true)
+    int findLikeCount(Long postId);
+
     @Query(value = "SELECT EXISTS (SELECT 1 FROM post_likes WHERE user_id = :userId AND post_id = :postId)",
             nativeQuery = true)
     boolean existsLike(Long userId, Long postId);

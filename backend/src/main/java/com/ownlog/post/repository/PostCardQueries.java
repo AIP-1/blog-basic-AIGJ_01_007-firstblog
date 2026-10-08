@@ -10,13 +10,14 @@ public final class PostCardQueries {
              and c.visibility = com.ownlog.global.common.Visibility.PUBLIC
             """;
 
-    /** 카드에 필요한 컬럼만 (본문 content는 읽지 않아요) */
-    public static final String SELECT_CARD = """
-            select new com.ownlog.post.dto.PostCardRow(
+    /** 카드에 필요한 컬럼만 (본문 content는 읽지 않아요). 북마크 목록도 이 목록을 재사용해요 */
+    public static final String CARD_FIELDS = """
                 p.id, p.title, p.summary, p.thumbnailUrl, p.likeCount, p.publishedAt,
                 u.username, u.nickname, u.profileImageUrl, u.status,
-                t.id, t.slug, t.name, p.visibility, c.visibility)
+                t.id, t.slug, t.name, p.visibility, c.visibility
             """;
+
+    public static final String SELECT_CARD = "select new com.ownlog.post.dto.PostCardRow(" + CARD_FIELDS + ")";
 
     public static final String FROM_CARD = """
              from Post p
