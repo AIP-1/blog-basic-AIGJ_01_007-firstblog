@@ -75,14 +75,15 @@ public class PostQueryService {
      */
     @Transactional(readOnly = true)
     public Post getViewablePost(Long postId, LoginUser me) {
-        Post post = postRepository.findById(postId)
-                .filter(Post::isPublished)
+        return postRepository.findById(postId)
+                .filter(post -> isViewable(post, me))
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+    }
+
+    /** 볼 수 있나?만 참/거짓으로 (댓글 신고처럼 다른 에러 코드로 응답해야 할 때 써요) */
+    public boolean isViewable(Post post, LoginUser me) {
         boolean isOwner = me != null && post.isOwnedBy(me.id());
-        if (!isOwner && !post.isVisibleToPublic()) {
-            throw new BusinessException(ErrorCode.POST_NOT_FOUND);
-        }
-        return post;
+        return post.isPublished() && (isOwner || post.isVisibleToPublic());
     }
 
     /** API 6.1 메인 최신·인기 (+ 토픽 필터) */
