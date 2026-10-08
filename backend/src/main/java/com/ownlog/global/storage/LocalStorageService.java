@@ -1,8 +1,13 @@
 package com.ownlog.global.storage;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +22,22 @@ public class LocalStorageService implements StorageService {
 
     public LocalStorageService(UploadProperties properties) {
         this.root = Path.of(properties.dir()).toAbsolutePath().normalize();
+    }
+
+    /** {upload.dir}/{연}/{월}/{UUID}.{확장자}에 저장해요. 폴더 날짜는 한국 기준이에요 */
+    @Override
+    public String store(InputStream content, String extension) {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        String relative = "%d/%02d/%s.%s".formatted(
+                today.getYear(), today.getMonthValue(), UUID.randomUUID(), extension);
+        Path target = root.resolve(relative);
+        try {
+            Files.createDirectories(target.getParent());
+            Files.copy(content, target);
+        } catch (IOException e) {
+            throw new UncheckedIOException("파일 저장 실패: " + relative, e);   // 디스크 문제 → 500
+        }
+        return URL_PREFIX + relative;
     }
 
     @Override
