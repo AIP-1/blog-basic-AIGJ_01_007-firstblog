@@ -1,5 +1,7 @@
 package com.ownlog.auth.controller;
 
+import com.ownlog.auth.dto.LoginRequest;
+import com.ownlog.auth.dto.LoginResponse;
 import com.ownlog.auth.dto.SignupRequest;
 import com.ownlog.auth.dto.SignupResponse;
 import com.ownlog.auth.dto.UsernameCheckResponse;
@@ -26,6 +28,12 @@ public class AuthController {
     @PostMapping("/signup")
     public ResponseEntity<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.signup(request));
+    }
+
+    /** API 4.2 로그인 */
+    @PostMapping("/login")
+    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
+        return authService.login(request);
     }
 
     /** API 4.3 아이디 사용 가능 여부 → 항상 200 (불가능하면 reason으로 알려줘요) */
