@@ -47,3 +47,13 @@ export function setLike(postId, liked) {
 export function setBookmark(postId, bookmarked) {
   return (bookmarked ? api.put : api.delete)(`/posts/${postId}/bookmark`).then((r) => r.data)
 }
+
+/** API 6.6 바로 발행 → { id, username } */
+export function createPost(body) {
+  return api.post('/posts', body).then((r) => r.data)
+}
+
+/** API 6.7 발행 글 수정 → { id, username, editedAt } */
+export function updatePost(postId, body) {
+  return api.put(`/posts/${postId}`, body).then((r) => r.data)
+}

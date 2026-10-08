@@ -1,6 +1,9 @@
+import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
+import RequireAuth from './auth/RequireAuth'
 import Layout from './components/Layout'
 import BlogPage from './pages/BlogPage'
+import DraftsPage from './pages/DraftsPage'
 import LoginPage from './pages/LoginPage'
 import MainPage from './pages/MainPage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -8,6 +11,10 @@ import PostDetailPage from './pages/PostDetailPage'
 import SearchPage from './pages/SearchPage'
 import SignupPage from './pages/SignupPage'
 import TagPage from './pages/TagPage'
+
+// 마크다운 편집기가 커서 글쓰기 화면은 들어갈 때만 불러와요 (첫 화면 로딩을 가볍게)
+const WritePage = lazy(() => import('./pages/WritePage'))
+const loadingFallback = <p className="py-16 text-center text-gray-500">불러오는 중…</p>
 
 /** 화면 주소 (요구사항 4장). 화면을 만들 때마다 여기에 추가해요 */
 export default function App() {
@@ -22,7 +29,11 @@ export default function App() {
         {/* /@아이디: React Router는 "/@:username"처럼 글자와 변수를 섞을 수 없어서 /:handle로 받고 화면에서 @를 확인해요 */}
         <Route path="/:handle" element={<BlogPage />} />
         <Route path="/:handle/posts/:postId" element={<PostDetailPage />} />
-        {/* 다음 작업: 🔒 /write, /write/:postId, /drafts, /settings, /settings/categories, /bookmarks */}
+        {/* 🔒 로그인 필요 */}
+        <Route path="/write" element={<RequireAuth><Suspense fallback={loadingFallback}><WritePage /></Suspense></RequireAuth>} />
+        <Route path="/write/:postId" element={<RequireAuth><Suspense fallback={loadingFallback}><WritePage /></Suspense></RequireAuth>} />
+        <Route path="/drafts" element={<RequireAuth><DraftsPage /></RequireAuth>} />
+        {/* 다음 작업: 🔒 /settings, /settings/categories, /bookmarks */}
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
