@@ -39,17 +39,17 @@ erDiagram
         VARCHAR profile_image_url
         VARCHAR role
         VARCHAR status
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-        TIMESTAMP deleted_at
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+        TIMESTAMPTZ deleted_at
     }
     blogs {
         BIGSERIAL id PK
         BIGINT user_id FK
         VARCHAR name
         VARCHAR description
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
     }
     categories {
         BIGSERIAL id PK
@@ -58,8 +58,8 @@ erDiagram
         INT display_order
         BOOLEAN is_default
         VARCHAR visibility
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
     }
     topics {
         BIGSERIAL id PK
@@ -80,15 +80,15 @@ erDiagram
         VARCHAR visibility
         INT view_count
         INT like_count
-        TIMESTAMP published_at
-        TIMESTAMP edited_at
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
+        TIMESTAMPTZ published_at
+        TIMESTAMPTZ edited_at
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
     }
     tags {
         BIGSERIAL id PK
         VARCHAR name UK
-        TIMESTAMP created_at
+        TIMESTAMPTZ created_at
     }
     post_tags {
         BIGINT post_id PK,FK
@@ -101,18 +101,18 @@ erDiagram
         BIGINT parent_id FK
         VARCHAR content
         BOOLEAN is_deleted
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
     }
     post_likes {
         BIGINT user_id PK,FK
         BIGINT post_id PK,FK
-        TIMESTAMP created_at
+        TIMESTAMPTZ created_at
     }
     bookmarks {
         BIGINT user_id PK,FK
         BIGINT post_id PK,FK
-        TIMESTAMP created_at
+        TIMESTAMPTZ created_at
     }
     reports {
         BIGSERIAL id PK
@@ -122,7 +122,7 @@ erDiagram
         VARCHAR reason
         VARCHAR detail
         VARCHAR status
-        TIMESTAMP created_at
+        TIMESTAMPTZ created_at
     }
 ```
 
@@ -134,7 +134,7 @@ erDiagram
 |---|---|
 | PK | `BIGSERIAL` 자동 증가를 써요. 매핑 테이블(`post_tags`, `post_likes`, `bookmarks`)은 복합 PK를 써요 |
 | Enum | PostgreSQL ENUM 타입 대신 `VARCHAR(20)`로 저장하고, JPA `@Enumerated(EnumType.STRING)`을 써요 |
-| 시간 | `created_at`과 `updated_at`은 JPA Auditing으로 자동으로 채워요 |
+| 시간 | 모든 시간 컬럼은 **`TIMESTAMPTZ`**(시간대 포함)예요. Java 엔티티는 `Instant`로 받고, API 응답을 만들 때 한국 시간(`+09:00`)으로 바꿔요. 서버나 컨테이너의 시간대가 UTC여도 같은 순간은 같은 값으로 저장돼서 9시간 어긋나는 버그가 없어요. `created_at`과 `updated_at`은 JPA Auditing으로 자동으로 채워요 |
 | 카운트 컬럼 | `view_count`와 `like_count`는 **엔티티 변경 감지가 아니라 UPDATE 쿼리**(`SET view_count = view_count + 1`)로 바꿔요. 동시 요청에도 값이 유실되지 않고, `updated_at`도 건드리지 않아요 |
 | 이름 규칙 | 테이블은 복수형 snake_case, 컬럼은 snake_case로 써요 |
 
@@ -154,9 +154,9 @@ erDiagram
 | profile_image_url | VARCHAR(500) | Y | | |
 | role | VARCHAR(20) | N | `'USER'` | `USER` / `ADMIN`. 관리자 기능은 2차지만 권한 구조를 미리 준비해 둬요 |
 | status | VARCHAR(20) | N | `'ACTIVE'` | `ACTIVE` / `DELETED` |
-| created_at | TIMESTAMP | N | | |
-| updated_at | TIMESTAMP | N | | |
-| deleted_at | TIMESTAMP | Y | | 탈퇴 시각 |
+| created_at | TIMESTAMPTZ | N | | |
+| updated_at | TIMESTAMPTZ | N | | |
+| deleted_at | TIMESTAMPTZ | Y | | 탈퇴 시각 |
 
 - **JWT 인증 필터는 요청마다 `status = 'ACTIVE'`인지 확인**해요. 탈퇴한 회원이 만료 전 토큰으로 요청하는 걸 막기 위해서예요.
 - Spring Security의 `UserDetails.getUsername()`에는 이 테이블의 `username`(아이디)이 아니라 **`email`(로그인 ID)** 을 넘겨요.
@@ -168,8 +168,8 @@ erDiagram
 | user_id | BIGINT | N | | FK → users. **UNIQUE 제약을 걸지 않아요** (1:N 구조, 요구사항 5.1) |
 | name | VARCHAR(50) | N | | 블로그 이름. 가입할 때 기본값은 `{닉네임}의 블로그`예요 |
 | description | VARCHAR(200) | Y | | 블로그 소개 (공통 CF-04 "공간의 이름과 소개"에 대응) |
-| created_at | TIMESTAMP | N | | |
-| updated_at | TIMESTAMP | N | | |
+| created_at | TIMESTAMPTZ | N | | |
+| updated_at | TIMESTAMPTZ | N | | |
 
 > "1인 1블로그" 제한은 DB가 아니라 **회원가입 서비스 로직**에서 처리해요.
 
@@ -182,8 +182,8 @@ erDiagram
 | display_order | INT | N | `0` | 사이드바 정렬 순서 (B-04 순서 변경) |
 | is_default | BOOLEAN | N | `false` | 기본 카테고리 "미분류"만 `true` |
 | visibility | VARCHAR(20) | N | `'PUBLIC'` | `PUBLIC` / `PRIVATE`. 비공개면 그 안의 글은 글 설정과 관계없이 방문자에게 숨겨져요 (B-05, 4.1절) |
-| created_at | TIMESTAMP | N | | |
-| updated_at | TIMESTAMP | N | | |
+| created_at | TIMESTAMPTZ | N | | |
+| updated_at | TIMESTAMPTZ | N | | |
 
 - **부분 UNIQUE 인덱스** `UNIQUE(blog_id) WHERE is_default = true`로 블로그마다 기본 카테고리를 1개만 둘 수 있게 해요.
 - `is_default = true`인 카테고리는 **삭제할 수 없어요.** 이름, 순서, 공개 범위는 바꿀 수 있어요.
@@ -205,10 +205,10 @@ erDiagram
 | visibility | VARCHAR(20) | N | `'PUBLIC'` | `PUBLIC` / `PRIVATE`. 글 자체의 설정이에요. 실제 노출 여부는 카테고리의 공개 범위와 함께 판단해요 (4.1절) |
 | view_count | INT | N | `0` | 작성자 본인 조회는 제외해요 |
 | like_count | INT | N | `0` | 인기순 정렬용 비정규화 컬럼. 좋아요 추가나 취소와 **같은 트랜잭션**에서 바꿔요 |
-| published_at | TIMESTAMP | Y | | 처음 발행한 시각. 최신순 정렬과 "최근 7일" 기준이에요 |
-| edited_at | TIMESTAMP | Y | | **발행 후 내용을 수정한 시각.** 화면의 "수정일"이에요 (P-05). **제목, 본문, 썸네일, 태그가 바뀔 때만** 갱신해요 (카테고리 이동, 공개 범위 변경은 제외). NULL이면 수정한 적이 없는 글이에요 |
-| created_at | TIMESTAMP | N | | |
-| updated_at | TIMESTAMP | N | | 임시저장 목록은 이 값의 최신순으로 정렬해요 |
+| published_at | TIMESTAMPTZ | Y | | 처음 발행한 시각. 최신순 정렬과 "최근 7일" 기준이에요 |
+| edited_at | TIMESTAMPTZ | Y | | **발행 후 내용을 수정한 시각.** 화면의 "수정일"이에요 (P-05). **제목, 본문, 썸네일, 태그가 바뀔 때만** 갱신해요 (카테고리 이동, 공개 범위 변경은 제외). NULL이면 수정한 적이 없는 글이에요 |
+| created_at | TIMESTAMPTZ | N | | |
+| updated_at | TIMESTAMPTZ | N | | 임시저장 목록은 이 값의 최신순으로 정렬해요 |
 
 > ⚠️ **`updated_at`을 수정일로 쓰지 않는 이유:** 조회수나 좋아요 수가 바뀔 때 `updated_at`이 갱신될 수 있어요. 그러면 읽기만 한 글도 "수정됨"으로 보이는 버그가 생겨요. 화면의 수정일은 `edited_at`만 써요. 화면의 작성일은 `created_at`이 아니라 `published_at`(처음 발행한 시각)이에요.
 
@@ -230,7 +230,7 @@ CONSTRAINT ck_posts_published_required CHECK (
 |---|---|---|---|---|
 | tags | id | BIGSERIAL | N | PK |
 | tags | name | VARCHAR(20) | N | **대소문자 무시 UNIQUE** (`LOWER(name)`). 처음 만들어진 표기 그대로 저장하고 보여줘요. `#`은 빼고, 앞뒤 공백을 제거하고 저장해요 |
-| tags | created_at | TIMESTAMP | N | |
+| tags | created_at | TIMESTAMPTZ | N | |
 | post_tags | post_id | BIGINT | N | PK, FK → posts |
 | post_tags | tag_id | BIGINT | N | PK, FK → tags |
 
@@ -262,8 +262,8 @@ CREATE UNIQUE INDEX uk_tags_name_lower ON tags (LOWER(name));
 | parent_id | BIGINT | Y | | FK → comments(자기 참조). NULL이면 일반 댓글이에요 |
 | content | VARCHAR(1000) | N | | |
 | is_deleted | BOOLEAN | N | `false` | 답글이 있는 댓글을 삭제할 때 `true`로 바꾸고 "삭제된 댓글입니다"로 표시해요 |
-| created_at | TIMESTAMP | N | | |
-| updated_at | TIMESTAMP | N | | |
+| created_at | TIMESTAMPTZ | N | | |
+| updated_at | TIMESTAMPTZ | N | | |
 
 - **깊이 1단계 규칙:** `parent_id`로 가리키는 댓글은 반드시 `parent_id IS NULL`이어야 하고, **같은 글의 댓글**이어야 해요 (서비스 검증. 다른 행을 봐야 해서 CHECK로는 막을 수 없어요). 화면에서는 답글에 [답글] 버튼을 보여주지 않아요.
 - 임시저장 글과 볼 수 없는 글(ERD 4.1)에는 댓글을 달 수 없어요.
@@ -280,7 +280,7 @@ CREATE UNIQUE INDEX uk_tags_name_lower ON tags (LOWER(name));
 |---|---|---|---|
 | user_id | BIGINT | N | PK, FK → users |
 | post_id | BIGINT | N | PK, FK → posts |
-| created_at | TIMESTAMP | N | 북마크 목록은 이 값의 최신순으로 정렬해요 |
+| created_at | TIMESTAMPTZ | N | 북마크 목록은 이 값의 최신순으로 정렬해요 |
 
 - 복합 PK `(user_id, post_id)`로 **1인 1회** 규칙을 DB에서 보장해요.
 - 좋아요와 북마크 모두 **자기 글에도 할 수 있어요** (C-03, K-01). 자기 글 좋아요도 `like_count`에 포함돼요.
@@ -309,7 +309,7 @@ CREATE UNIQUE INDEX uk_tags_name_lower ON tags (LOWER(name));
 | reason | VARCHAR(20) | N | | `SPAM` / `ABUSE` / `ADULT` / `ETC` |
 | detail | VARCHAR(500) | Y | | 상세 사유. **`reason = 'ETC'`이면 필수**예요 (CHECK 제약) |
 | status | VARCHAR(20) | N | `'RECEIVED'` | `RECEIVED`(접수) / `RESOLVED`(조치함) / `REJECTED`(문제없음). **MVP는 `RECEIVED`만** 써요. 나머지는 2차 관리자 기능에서 써요 |
-| created_at | TIMESTAMP | N | | |
+| created_at | TIMESTAMPTZ | N | | |
 
 **글 신고와 댓글 신고를 한 테이블에서 관리해요**
 ```sql
@@ -436,6 +436,6 @@ AND c.visibility = 'PUBLIC'   -- posts p JOIN categories c ON c.id = p.category_
 | 관리자, 신고 처리 | 스키마 변경 없음. `users.role`은 MVP부터 있으니 `ADMIN` 권한을 부여하고, `reports.status`를 `RESOLVED`/`REJECTED`로 바꿔요. 신고 시점 내용 보존이 필요하면 `reports`에 스냅샷 컬럼을 추가하고, 신고된 글의 삭제 정책(Soft Delete 등)도 함께 정해요 |
 | 구독, 알림 | `subscriptions`, `notifications` 테이블을 새로 만들어요 |
 | 조회수 중복 방지 | `post_views` 테이블 또는 Redis를 써요 |
-| 방문자 통계 | `blog_daily_visits` 테이블을 새로 만들어요 |
+| 방문자 통계 (팀 DB의 `blog_daily_stat`, `UNIQUE(blog_id, stat_date)` 참고) | `blog_daily_visits` 테이블을 새로 만들어요 |
 | Refresh Token | `refresh_tokens` 테이블 또는 Redis를 써요 |
-| 이미지 정리 | `uploaded_files` 테이블로 어디에서도 쓰지 않는 이미지를 추적해요 |
+| 이미지 정리 (팀 DB의 `post_image(post_id, storage_key)` 참고) | `uploaded_files` 테이블로 어디에서도 쓰지 않는 이미지를 추적해요 |
