@@ -28,7 +28,7 @@
 - `backend/src/main/java/com/ownlog/` 기능별 패키지: auth, user, blog, category, post, tag, topic, comment, reaction, report, image, link, universe, global
 - `frontend/src/` api, auth, components, hooks, pages, utils
 - `e2e/` 화면 점검, `scripts/seed-demo.mjs` 시연 데이터, `deploy/deploy.sh` 서버 실행 스크립트
-- 문서(코드와 함께 갱신): `요구사항.md`, `docs/ERD.md`, `docs/API명세서.md`, `docs/기록유니버스-설계.md`, `README.md`
+- 문서(코드와 함께 갱신): `요구사항.md`, `docs/ERD.md`, `docs/API명세서.md`, `docs/기록유니버스-설계.md`, `README.md`, `CHANGELOG.md`, `docs/트러블슈팅.md`
 
 **새 기능 전에 먼저 읽을 것:** 관련 엔티티와 `V*.sql`, `PostCardQueries`(공개 조건), 같은 영역의 기존 서비스·컴포넌트, API 명세의 해당 장. 비슷한 코드가 있으면 재사용하고 중복을 만들지 않아요.
 
@@ -36,7 +36,7 @@
 **바로 진행해도 돼요**
 - 요청 범위 안의 코드·문서 수정과 새 파일 만들기
 - 빌드, 테스트, lint, 로컬 서버 실행, `e2e` 점검, 로컬 DB 조회
-- 검증을 마친 작업의 커밋·푸시 (main 푸시는 자동 배포돼요)
+- 작업 브랜치(`feature/*` 등) 만들기, 검증을 마친 작업의 커밋·푸시, `develop`으로 병합 (11장)
 
 **먼저 물어봐요**
 - 파일·폴더·데이터 **삭제**, 로컬·서버 DB 초기화, 대량 수정
@@ -44,11 +44,14 @@
 - DB 구조 변경(새 Flyway 마이그레이션), API 응답 형식 변경
 - 배포 설정(`.github/workflows`, `deploy/`, Dockerfile, Nginx), 서버 접속
 - 외부에 공개되는 작업(서버 데이터 넣기, 공개 페이지 게시)
+- **`main`에 병합(= 운영 배포)**: release·hotfix 마무리는 요청받았을 때만 해요
+- 태그 삭제·이동, 브랜치 삭제(병합이 끝난 작업 브랜치는 예외)
 
 **하지 않아요**
 - 비밀값(DB·SSH 비밀번호, JWT 비밀키)을 코드·커밋·채팅에 쓰기. 비밀값은 `.env`(커밋 금지)와 GitHub Secrets에만 있어요
 - 배포 설명서 PDF(`docs/서버 배포 설명서*.pdf`) 커밋
 - 서버에서 `docker run`으로 다른 포트 쓰기 (내 포트는 **8360~8369**)
+- `main`·`develop`에 직접 커밋, force push, 공유 브랜치 rebase, 기존 이력 다시 쓰기(amend·reset 후 푸시)
 
 ## 6. 코드 규칙
 ### API (명세: `docs/API명세서.md`)
@@ -79,7 +82,9 @@
 2. `npm run lint`(경고 0), `npm run build`
 3. 화면 변경이면 `e2e/`에 점검을 추가하거나 갱신하고 실행(시연 DB를 더럽히면 안 되면 `e2e/README.md`의 별도 스키마 방법)
 4. 문서 동기화: 요구사항(ID·변경 이력), ERD, API 명세, 필요하면 README·설계서
-5. 커밋: `feat:`/`fix:`/`docs:`/`chore:` + 한국어 요약 + 본문 목록, 마지막 줄에 `Co-Authored-By`
+5. `CHANGELOG.md`의 `[Unreleased]`에 사용자 관점으로 한 줄씩 추가 (추가·변경·수정·보안·삭제)
+6. 의미 있는 문제를 풀었다면 `docs/트러블슈팅.md`에 사례 추가 (12장)
+7. 작업 브랜치에서 커밋(11장 형식) → `develop`에 `--no-ff` 병합 → 푸시
 
 ## 8. 기능을 마친 뒤 점검 루틴
 기능 단위가 끝나면 아래를 스스로 훑고, 발견한 것은 고치거나 보고해요.
@@ -101,7 +106,59 @@ docker exec ownlog-postgres psql -U ownlog -d ownlog   # 로컬 DB 접속
 ```
 
 ## 10. 배포
-- `main` 푸시 → GitHub Actions(테스트 → Docker 이미지 → scp → `deploy/deploy.sh`). `*.md`, `docs/`, `scripts/`만 바뀌면 배포하지 않아요.
+- `main` 푸시(= release·hotfix 병합) → GitHub Actions `deploy.yml`(테스트 → Docker 이미지 → scp → `deploy/deploy.sh`). `*.md`, `docs/`, `scripts/`만 바뀌면 배포하지 않아요.
+- `develop`·작업 브랜치 푸시와 PR → `ci.yml`(테스트만, 배포 없음).
 - 서버: `s2.java21.net`(SSH 8822), 앱 포트 **8360**, 컨테이너는 `--network host`(Docker 기본 네트워크로는 내부망 DB에 못 가요), 업로드는 `~/ownlog-uploads`.
 - `deploy.sh`는 시작 전에 DB 연결을 확인하고, 실패하면 원인(Caused by)을 보여줘요. 배포 결과는 Actions 화면이나 `https://ownlog.java21.net/api/topics`로 확인해요.
 - Nginx 설정(`~/nginx/ownlog.java21.net.conf`)을 바꾸면 강사님께 반영을 요청해야 해요.
+
+## 11. Git 브랜치와 버전 (Git Flow)
+### 브랜치
+| 브랜치 | 용도 | 만드는 곳 → 병합하는 곳 |
+|---|---|---|
+| `main` | **운영(배포)되는 버전**. 푸시하면 자동 배포돼요. 태그 `vX.Y.Z`는 여기에만 | release·hotfix에서만 병합 |
+| `develop` | 다음 릴리스를 모으는 통합 브랜치 | 작업 브랜치에서 병합 |
+| `feature/영문-이름` | 새 기능 (예: `feature/image-resize`) | `develop` → `develop` |
+| `fix/영문-이름` | `develop`의 버그 | `develop` → `develop` |
+| `chore/`·`docs/`·`refactor/`·`test/` | 설정·문서·리팩터링·테스트 | `develop` → `develop` |
+| `release/X.Y.Z` | 릴리스 준비: 버전 올리기, CHANGELOG 정리, 마지막 확인 | `develop` → `main` + `develop` |
+| `hotfix/X.Y.Z` | **운영 중 긴급 수정** (발표 직전 버그 등) | `main` → `main` + `develop` |
+
+- 브랜치 이름은 영문 소문자와 `-`만 써요 (한글은 셸·URL에서 깨지기 쉬워요).
+- 병합은 항상 `git merge --no-ff`로 해서, 어떤 브랜치의 작업이었는지 이력에 남겨요.
+- 병합이 끝난 작업 브랜치는 로컬·원격에서 지워요 (`release`·`hotfix`도 태그를 남긴 뒤 지워요).
+- `gh` CLI가 없어서 PR은 만들 수 없어요. 브랜치를 푸시하고 검증(완료 기준)을 마친 뒤 `--no-ff`로 병합하고, PR 템플릿(`.github/pull_request_template.md`) 항목을 보고에 담아요. 사용자가 GitHub에서 PR로 보고 싶다고 하면 브랜치만 푸시하고 기다려요.
+- 여러 작업을 동시에 할 때는 `git worktree`를 써요: `git worktree add ../blog-basic-AIGJ_01_007-firstblog-<브랜치> -b feature/<이름> develop`. 다 쓰면 `git worktree remove`.
+
+### 커밋 메시지 (Conventional Commits)
+```
+<type>: <한국어 요약 (무엇을, 왜)>
+
+- 본문: 바뀐 내용을 목록으로
+- 요구사항 ID, 테스트 결과
+
+Co-Authored-By: ...
+```
+- type: `feat`(기능) `fix`(버그) `docs` `refactor` `perf` `test` `chore`(설정·도구) `ci` `style` `revert`
+- 하위 호환이 깨지면(API 응답 형식 변경 등) `feat!:`처럼 `!`를 붙이고 본문에 `BREAKING CHANGE:`를 적어요.
+
+### 버전 (SemVer)
+- **MAJOR**: 기존 사용 방식이 깨질 때(API 응답 형식, DB 데이터 호환) · **MINOR**: 새 기능 · **PATCH**: 버그 수정
+- 버전은 세 곳을 함께 올려요: `backend/build.gradle`의 `version`, `frontend/package.json`(`npm version X.Y.Z --no-git-tag-version`), `CHANGELOG.md`.
+- 태그는 주석 태그로: `git tag -a vX.Y.Z -m "vX.Y.Z: 한 줄 요약"`. 태그는 지우거나 옮기지 않아요.
+
+### 릴리스 절차 ("릴리스해 줘"라고 하면)
+1. `git log <마지막 태그>..develop`으로 변경을 모아 **다음 버전을 SemVer로 제안**해요 (feat가 있으면 MINOR, fix만 있으면 PATCH).
+2. `release/X.Y.Z`를 `develop`에서 만들고, 버전 세 곳을 올리고, `[Unreleased]`를 `[X.Y.Z] - 날짜`로 옮겨요. 테스트·lint·build를 돌려요.
+3. `main`에 `--no-ff` 병합 → 태그 `vX.Y.Z` → `develop`에도 병합 → 푸시 (main 푸시 = 배포)
+4. 배포 확인: `https://ownlog.java21.net/api/topics`, 필요하면 `e2e/rehearsal.mjs`
+
+### 핫픽스 절차 (운영 긴급 수정)
+`hotfix/X.Y.(Z+1)`을 `main`에서 만들어 고치고 → 회귀 테스트 → `main` 병합·태그 → `develop`에도 병합.
+
+## 12. 트러블슈팅 기록 (계속 쌓아요)
+- 버그·장애·예상과 다른 동작을 **원인까지 분석해서** 해결했다면, 작업을 마칠 때 `docs/트러블슈팅.md`에 사례를 추가해요. 오타나 단순 실수는 제외해요.
+- 형식: **상황 → 원인 분석 → 해결(코드) → 결과(테스트·수치) → 배운 점**. 맨 위 "한눈에 보기" 표에도 한 줄을 추가해요.
+- **실제로 겪은 것만** 써요. 미리 막은 문제는 "설계 단계에서 차단"이라고 밝히고, 추정은 추정이라고 써요.
+- 릴리스할 때 이번 버전에서 추가한 트러블슈팅 사례를 CHANGELOG에서 언급해요.
+

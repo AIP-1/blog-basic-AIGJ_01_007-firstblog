@@ -114,6 +114,22 @@ node e2e/run-all.mjs                  # 화면 점검 113개 (Chrome 필요, 자
 
 화면 점검은 실제로 가입·글쓰기·탈퇴를 해서 DB에 테스트 데이터가 남아요. 시연 DB를 깨끗하게 두려면 [e2e/README.md](e2e/README.md)의 "별도 스키마에서 돌리기"를 써요.
 
+## 브랜치와 버전
+
+[Git Flow](CLAUDE.md#11-git-브랜치와-버전-git-flow)를 써요. 버전은 [유의적 버전(SemVer)](https://semver.org/lang/ko/), 변경 기록은 [CHANGELOG.md](CHANGELOG.md)에 있어요.
+
+```
+main      ●───────────────●─────────── 운영(배포), 태그 vX.Y.Z
+           \             / \
+release     \     ●─────●   \           버전 올리기, CHANGELOG 정리
+             \   /           \
+develop   ●───●─●───●─────────●─────── 다음 릴리스를 모아요 (CI 테스트)
+               \   /
+feature         ●─●                    feature/*, fix/*, chore/* ...
+```
+- `develop`·작업 브랜치에 푸시하면 테스트만(`ci.yml`), `main`에 병합하면 테스트 후 배포(`deploy.yml`)돼요.
+- 커밋 메시지는 [Conventional Commits](https://www.conventionalcommits.org/ko/v1.0.0/) (`feat:`, `fix:`, `docs:` …)를 따라요.
+
 ## 배포
 
 `main` 브랜치에 푸시하면 GitHub Actions가 자동으로 배포해요.
