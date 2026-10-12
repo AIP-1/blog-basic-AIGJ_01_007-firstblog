@@ -1,5 +1,9 @@
 package com.ownlog.universe.repository;
 
+import static com.ownlog.post.repository.PostCardQueries.FROM_CARD;
+import static com.ownlog.post.repository.PostCardQueries.LATEST;
+import static com.ownlog.post.repository.PostCardQueries.PUBLIC_CONDITION;
+
 import com.ownlog.post.domain.Post;
 import com.ownlog.universe.dto.GraphNodeRow;
 import java.time.Instant;
@@ -18,15 +22,21 @@ public interface GraphRepository extends Repository<Post, Long> {
      * 주인은 비공개도 모두. 봉인 캡슐을 빼면 공개 조건(ERD 4.1)과 같아요.
      */
     @Query("""
-            select new com.ownlog.universe.dto.GraphNodeRow(p.id, p.title, t.slug, p.likeCount, p.publishedAt, p.sealedAt)
-              from Post p join p.category c left join p.topic t
-             where p.blog.id = :blogId
+            select new com.ownlog.universe.dto.GraphNodeRow(p.id, p.title, t.slug, p.likeCount, p.publishedAt, p.sealedAt,
+                                                            u.username, u.nickname)
+              from Post p join p.category c left join p.topic t join p.blog b join b.user u
+             where b.id = :blogId
                and p.status = com.ownlog.post.domain.PostStatus.PUBLISHED
                and (:owner = true or (p.visibility = com.ownlog.global.common.Visibility.PUBLIC
                                       and c.visibility = com.ownlog.global.common.Visibility.PUBLIC))
              order by p.publishedAt desc, p.id desc
             """)
     List<GraphNodeRow> findNodes(Long blogId, boolean owner, Pageable pageable);
+
+    /** 14.3 서비스 전체 우주: 모든 블로그의 공개 글 (공개 조건 그대로, 봉인 캡슐 제외), 최신순 */
+    @Query("select new com.ownlog.universe.dto.GraphNodeRow(p.id, p.title, t.slug, p.likeCount, p.publishedAt, p.sealedAt,"
+            + " u.username, u.nickname)" + FROM_CARD + " where " + PUBLIC_CONDITION + LATEST)
+    List<GraphNodeRow> findPublicNodes(Pageable pageable);
 
     /** 링크 선: 양 끝이 모두 별 목록에 있는 것 */
     @Query(value = """

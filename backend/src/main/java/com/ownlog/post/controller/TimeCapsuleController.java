@@ -2,6 +2,7 @@ package com.ownlog.post.controller;
 
 import com.ownlog.global.security.LoginUser;
 import com.ownlog.post.dto.PostCard;
+import com.ownlog.post.dto.ReceivedCapsuleItem;
 import com.ownlog.post.dto.TimeCapsuleItem;
 import com.ownlog.post.service.PostQueryService;
 import java.util.List;
@@ -23,6 +24,12 @@ public class TimeCapsuleController {
     public List<TimeCapsuleItem> getSealedCapsules(@PathVariable String username,
                                                    @AuthenticationPrincipal LoginUser me) {
         return postQueryService.getSealedCapsules(username, me);
+    }
+
+    /** API 12.3 받은 타임캡슐 (🔒) */
+    @GetMapping("/api/users/me/time-capsules")
+    public List<ReceivedCapsuleItem> getReceivedCapsules(@AuthenticationPrincipal LoginUser me) {
+        return postQueryService.getReceivedCapsules(me);
     }
 
     /** API 12.2 최근 열린 타임캡슐 (🔓) */

@@ -26,3 +26,8 @@ export function getGraph(username) {
 export function getActivity(username) {
   return api.get(`/blogs/${username}/activity`).then((r) => r.data)
 }
+
+/** API 14.3 서비스 전체 우주 (모든 블로그의 공개 글) */
+export function getUniverse() {
+  return api.get('/universe').then((r) => r.data)
+}

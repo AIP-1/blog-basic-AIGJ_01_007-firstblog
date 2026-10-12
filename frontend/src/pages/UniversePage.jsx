@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { getBlogHome, getGraph } from '../api/blogs'
 import { getTopics } from '../api/posts'
 import { useAuth } from '../auth/useAuth'
+import Timelapse from '../components/Timelapse'
 import UniverseCanvas from '../components/UniverseCanvas'
 import { useAsync } from '../hooks/useAsync'
 import { TOPIC_COLORS } from '../utils/topicColors'
@@ -19,6 +20,7 @@ export default function UniversePage() {
   const topics = useAsync(() => getTopics(), 'topics')
   const [query, setQuery] = useState('')
   const [focusId, setFocusId] = useState(null)
+  const [until, setUntil] = useState(null) // 타임랩스 (GR-05)
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -62,7 +64,10 @@ export default function UniversePage() {
           <p className="mt-1 text-sm text-slate-400">글을 쓰고 [[로 다른 글을 연결해 보세요.</p>
         </div>
       ) : (
-        <UniverseCanvas graph={graph.data} onSelect={open} highlightIds={matches} focusId={focusId} />
+        <>
+          <UniverseCanvas graph={graph.data} onSelect={open} highlightIds={matches} focusId={focusId} visibleUntil={until} />
+          <Timelapse times={nodes.map((n) => Number(new Date(n.writtenAt)))} onChange={setUntil} />
+        </>
       )}
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">

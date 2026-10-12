@@ -46,6 +46,8 @@ public enum ErrorCode {
     // 타임캡슐
     INVALID_OPEN_AT(HttpStatus.BAD_REQUEST, "열리는 시각은 1분 뒤부터 10년 안으로 정해 주세요."),
     TIME_CAPSULE_SEALED(HttpStatus.BAD_REQUEST, "봉인된 타임캡슐은 열리기 전까지 수정할 수 없어요."),
+    INVALID_RECIPIENT(HttpStatus.BAD_REQUEST, "받는 사람을 찾을 수 없어요. 다른 회원의 아이디를 확인해 주세요."),
+    RECIPIENT_REQUIRES_CAPSULE(HttpStatus.BAD_REQUEST, "받는 사람은 타임캡슐에만 정할 수 있어요."),
 
     // 댓글
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 댓글이에요."),

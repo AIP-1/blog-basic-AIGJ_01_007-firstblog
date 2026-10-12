@@ -15,6 +15,8 @@ import com.ownlog.post.dto.PostRequest;
 import com.ownlog.post.dto.PostUpdateResponse;
 import com.ownlog.post.repository.PostRepository;
 import com.ownlog.tag.service.TagService;
+import com.ownlog.user.domain.User;
+import java.time.Instant;
 import com.ownlog.topic.service.TopicService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,18 +32,21 @@ public class PostService {
     private final TopicService topicService;
     private final TagService tagService;
     private final PostLinkService postLinkService;
+    private final CapsuleRecipientResolver recipientResolver;
 
     /** API 6.6 바로 발행. 블로그는 토큰의 회원으로 정해요 (요청에 blogId 없음) */
     @Transactional
     public PostCreateResponse create(LoginUser me, PostRequest request) {
         Blog blog = blogService.getMyBlog(me.id());
+        Instant openAt = TimeCapsulePolicy.openAtOrNull(request.openAt());
+        User recipient = recipientResolver.resolve(request.recipientUsername(), openAt, me);
         Post post = postRepository.save(Post.publish(blog,
                 categoryService.getCategoryForPost(blog, request.categoryId()),
                 topicService.getTopicOrNull(request.topicId()),
                 request.title().strip(), request.content(), request.thumbnailUrl(),
                 Visibility.orPublic(request.visibility()),
                 tagService.resolveTags(request.tags()),
-                TimeCapsulePolicy.openAtOrNull(request.openAt())));
+                openAt, recipient));
         postLinkService.sync(post);
         return new PostCreateResponse(post.getId(), me.username());
     }

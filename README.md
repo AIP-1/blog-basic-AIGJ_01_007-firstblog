@@ -15,6 +15,10 @@
 | 🔗 **`[[글]]` 연결** | 본문에서 `[[`를 입력하면 글 자동완성. 상세 하단에 "이 글을 언급한 글"(백링크). 볼 수 없는 글은 제목도 숨겨요 |
 | 🌌 **기록 우주** | `/@아이디/universe`: 글은 별, 링크와 같은 태그는 선. 끌고, 확대하고, 별을 누르면 글로 가요 |
 | 🌱 **기록 잔디** | 블로그 홈에 1년 잔디와 🔥 연속 기록. 칸을 누르면 그날의 기록 |
+| 💌 **받는 사람 타임캡슐** | 다른 회원에게 보내는 캡슐. 둘만 볼 수 있고, 열리면 받는 사람만 읽어요. "💌 받은 캡슐"에서 모아 봐요 |
+| 🎞️ **우주 타임랩스** | ▶를 누르면 첫 기록부터 오늘까지 별이 태어나며 우주가 자라나요 |
+| 🌌 **OwnLog 우주** | `/universe`: 모든 블로그의 공개 글이 블로그별 은하로 모이고, 블로그 사이 링크가 다리처럼 이어져요 |
+| 🔍 **링크 미리보기** | 본문의 🔗 링크에 마우스를 올리면 그 글의 요약 카드 |
 
 ## 주요 기능
 
@@ -48,7 +52,7 @@
 │       └── resources/
 │           ├── application.yaml        로컬 설정 (.env 읽음)
 │           ├── application-prod.yaml   배포 설정
-│           └── db/migration/     V1 테이블 생성, V2 타임캡슐, V3 글 연결 (Flyway)
+│           └── db/migration/     V1 테이블 생성, V2 타임캡슐, V3 글 연결, V4 받는 사람 캡슐, V5 요약 정리 (Flyway)
 ├── frontend/                 React SPA
 │   └── src/                  api, auth, components, hooks, pages, utils
 ├── deploy/deploy.sh          서버에서 컨테이너를 실행하는 스크립트
@@ -92,7 +96,7 @@ cd frontend && npm install && npm run dev
 LOCAL_SQL=1 node scripts/seed-demo.mjs        # 로컬 (기록 잔디용 예전 날짜까지 채워요)
 BASE=https://ownlog.java21.net node scripts/seed-demo.mjs   # 서버 (API로만 넣어요)
 ```
-회원 5명(`codewave`, `tripnote`, `cookbook`, `bookworm`, `runner`, 이메일은 `아이디@demo.ownlog`, 비밀번호 `ownlog1234`)과 글 30개(타임캡슐 4개, `[[링크]]`, 비공개 글·카테고리), 임시저장, 댓글·답글·삭제된 댓글, 좋아요, 북마크, 신고가 들어가요. "3분 뒤에 열리는 기록"은 넣고 3분 뒤에 열려요.
+회원 5명(`codewave`, `tripnote`, `cookbook`, `bookworm`, `runner`, 이메일은 `아이디@demo.ownlog`, 비밀번호 `ownlog1234`)과 글 33개(타임캡슐 4개, 받는 사람 캡슐 3개, `[[링크]]`, 비공개 글·카테고리), 임시저장, 댓글·답글·삭제된 댓글, 좋아요, 북마크, 신고가 들어가요. "3분 뒤에 열리는 기록"은 넣고 3분 뒤에 열려요.
 
 ### 테스트
 

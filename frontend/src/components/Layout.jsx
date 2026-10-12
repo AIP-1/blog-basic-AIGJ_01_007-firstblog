@@ -26,6 +26,7 @@ export default function Layout() {
 
   const closeMenu = () => setMenuOpen(false)
   const userLinks = [
+    { to: '/capsules', label: '💌 받은 캡슐' },
     { to: '/bookmarks', label: '북마크' },
     { to: '/drafts', label: '임시저장' },
     { to: '/settings', label: '설정' },
@@ -37,6 +38,9 @@ export default function Layout() {
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
           <Link to="/" className="text-xl font-bold text-indigo-600">
             OwnLog
+          </Link>
+          <Link to="/universe" className="rounded-md px-2 py-1 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700" title="OwnLog 우주">
+            🌌<span className="ml-1 hidden sm:inline">우주</span>
           </Link>
 
           <form onSubmit={search} className="order-last w-full sm:order-none sm:w-auto sm:flex-1">

@@ -79,7 +79,11 @@ class PostLinkApiTest extends IntegrationTest {
         getAs("/api/blogs/nayoung/posts/" + security, null)
                 .andExpect(jsonPath("$.linkedPosts['" + jwt + "'].accessible").value(true))
                 .andExpect(jsonPath("$.linkedPosts['" + jwt + "'].title").value("JWT 정리"))
-                .andExpect(jsonPath("$.linkedPosts['" + jwt + "'].username").value("nayoung"));
+                .andExpect(jsonPath("$.linkedPosts['" + jwt + "'].username").value("nayoung"))
+                // 미리보기 카드용 (LK-06)
+                .andExpect(jsonPath("$.linkedPosts['" + jwt + "'].nickname").value("nayoung"))
+                .andExpect(jsonPath("$.linkedPosts['" + jwt + "'].summary").value("본문"))
+                .andExpect(jsonPath("$.linkedPosts['" + jwt + "'].publishedAt").isNotEmpty());
     }
 
     @Test
@@ -122,6 +126,7 @@ class PostLinkApiTest extends IntegrationTest {
         getAs("/api/blogs/nayoung/posts/" + mine, nayoung)
                 .andExpect(jsonPath("$.linkedPosts['" + secret + "'].accessible").value(false))
                 .andExpect(jsonPath("$.linkedPosts['" + secret + "'].title").doesNotExist())
+                .andExpect(jsonPath("$.linkedPosts['" + secret + "'].summary").doesNotExist())
                 .andExpect(jsonPath("$.linkedPosts['" + capsule + "'].accessible").value(false))
                 .andExpect(jsonPath("$.linkedPosts['" + gone + "'].accessible").value(false));
 

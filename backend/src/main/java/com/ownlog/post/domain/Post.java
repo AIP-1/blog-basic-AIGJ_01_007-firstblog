@@ -7,6 +7,7 @@ import com.ownlog.global.entity.BaseTimeEntity;
 import com.ownlog.global.util.MarkdownText;
 import com.ownlog.tag.domain.Tag;
 import com.ownlog.topic.domain.Topic;
+import com.ownlog.user.domain.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -89,6 +90,11 @@ public class Post extends BaseTimeEntity {
     /** 타임캡슐을 봉인한(실제로 쓴) 시각. null이면 일반 글이에요 (TC-01) */
     private Instant sealedAt;
 
+    /** 받는 사람 (TC-07). 있으면 보낸 사람과 받는 사람 둘만 보는 비공개 캡슐이에요 */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recipient_id")
+    private User recipient;
+
     /** 화면의 수정일 (발행 후 제목·본문·썸네일·태그를 바꾼 시각) */
     private Instant editedAt;
 
@@ -98,11 +104,15 @@ public class Post extends BaseTimeEntity {
             inverseJoinColumns = @JoinColumn(name = "tag_id"))
     private Set<Tag> tags = new HashSet<>();
 
-    /** 바로 발행 (P-01). openAt이 있으면 그 시각에 열리는 타임캡슐로 발행해요 (TC-01) */
+    /**
+     * 바로 발행 (P-01). openAt이 있으면 그 시각에 열리는 타임캡슐로 발행해요 (TC-01).
+     * recipient가 있으면 받는 사람 캡슐이라 공개 범위를 비공개로 고정해요 (TC-07). 서비스가 openAt을 먼저 확인해요.
+     */
     public static Post publish(Blog blog, Category category, Topic topic, String title, String content,
-                               String thumbnailUrl, Visibility visibility, Set<Tag> tags, Instant openAt) {
+                               String thumbnailUrl, Visibility visibility, Set<Tag> tags, Instant openAt, User recipient) {
         Post post = new Post();
         post.blog = blog;
+        post.recipient = recipient;
         post.apply(category, topic, title, content, thumbnailUrl, visibility, tags);
         post.markPublished(openAt);
         return post;
@@ -127,8 +137,9 @@ public class Post extends BaseTimeEntity {
 
     /** 임시저장 글 발행 (D-05): 화면의 최신 내용을 저장하면서 발행해요. 작성일은 발행한 시각이에요 */
     public void publishDraft(Category category, Topic topic, String title, String content,
-                             String thumbnailUrl, Visibility visibility, Set<Tag> tags, Instant openAt) {
+                             String thumbnailUrl, Visibility visibility, Set<Tag> tags, Instant openAt, User recipient) {
         requireDraft();
+        this.recipient = recipient;
         apply(category, topic, title, content, thumbnailUrl, visibility, tags);
         markPublished(openAt);
     }
@@ -170,7 +181,7 @@ public class Post extends BaseTimeEntity {
         this.content = content;
         this.summary = MarkdownText.summarize(content);               // 카드용 요약 (저장할 때 한 번만)
         this.thumbnailUrl = resolveThumbnail(thumbnailUrl, content);  // 없으면 본문 첫 이미지 (P-02)
-        this.visibility = visibility;
+        this.visibility = recipient != null ? Visibility.PRIVATE : visibility;   // 받는 사람 캡슐은 늘 비공개 (TC-07)
         this.tags.clear();
         this.tags.addAll(tags);
     }
@@ -203,9 +214,18 @@ public class Post extends BaseTimeEntity {
         return isPublished() && visibility == Visibility.PUBLIC && !category.isPrivate();
     }
 
-    /** 이 회원(로그인 안 했으면 null)이 볼 수 있는 발행 글인가: 주인이면 비공개·봉인 중이어도 OK */
+    /**
+     * 이 회원(로그인 안 했으면 null)이 볼 수 있는 발행 글인가.
+     * 주인이면 비공개·봉인 중이어도 OK, 받는 사람은 열린 뒤에 OK (TC-08), 나머지는 공개 조건.
+     */
     public boolean isViewableBy(Long userId) {
-        return isPublished() && ((userId != null && isOwnedBy(userId)) || isVisibleToPublic());
+        return isPublished() && ((userId != null && isOwnedBy(userId)) || isVisibleToPublic()
+                || (isRecipient(userId) && !isSealed()));
+    }
+
+    /** 이 회원이 받는 사람인가 (LAZY 프록시의 id만 읽어서 추가 쿼리가 없어요) */
+    public boolean isRecipient(Long userId) {
+        return userId != null && recipient != null && recipient.getId().equals(userId);
     }
 
     public boolean isTimeCapsule() {

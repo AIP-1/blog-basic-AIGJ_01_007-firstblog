@@ -125,6 +125,39 @@ class GraphApiTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("별에는 타임랩스용 writtenAt(캡슐은 봉인 시각)과 블로그 정보가 있다 (GR-05)")
+    void nodesHaveWrittenAtAndBlog() throws Exception {
+        String openAt = OffsetDateTime.now(ZoneOffset.ofHours(9)).plusDays(3).toString();
+        Long capsule = publish(nayoung, """
+                {"title":"캡슐","content":"c","openAt":"%s"}""".formatted(openAt));
+        graph(minsu)
+                .andExpect(jsonPath("$.nodes[0].writtenAt").isNotEmpty())
+                .andExpect(jsonPath("$.nodes[?(@.id == %d)].writtenAt".formatted(capsule)).isNotEmpty())
+                .andExpect(jsonPath("$.nodes[0].username").value("nayoung"));
+    }
+
+    @Test
+    @DisplayName("서비스 전체 우주: 모든 블로그의 공개 글, 블로그 사이 링크, 비공개·봉인 캡슐 제외 (GR-06, 14.3)")
+    void universeAcrossBlogs() throws Exception {
+        Long mine = publish(nayoung, """
+                {"title":"나영 글","content":"c","tags":["공통"]}""");
+        publish(minsu, """
+                {"title":"민수 글","content":"[[%d|나영 글]]","tags":["공통"]}""".formatted(mine));
+        publish(minsu, """
+                {"title":"민수 비공개","content":"c","visibility":"PRIVATE"}""");
+        String openAt = OffsetDateTime.now(ZoneOffset.ofHours(9)).plusDays(3).toString();
+        publish(minsu, """
+                {"title":"민수 캡슐","content":"c","openAt":"%s"}""".formatted(openAt));
+
+        mockMvc.perform(get("/api/universe"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nodes", hasSize(2)))
+                .andExpect(jsonPath("$.nodes[*].username", containsInAnyOrder("nayoung", "minsu")))
+                .andExpect(jsonPath("$.edges", hasSize(2)))
+                .andExpect(jsonPath("$.edges[?(@.type == 'LINK')].target").value(mine.intValue()));
+    }
+
+    @Test
     @DisplayName("글이 없으면 빈 우주, 없는 블로그는 404")
     void emptyAndNotFound() throws Exception {
         graph(null).andExpect(jsonPath("$.nodes", hasSize(0))).andExpect(jsonPath("$.edges", hasSize(0)));

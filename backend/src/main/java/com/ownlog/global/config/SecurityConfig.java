@@ -44,13 +44,14 @@ public class SecurityConfig {
                         // 🔓 인증 (API 명세서 4.1 ~ 4.3)
                         .requestMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/check-username").permitAll()
-                        // 🔓 읽기 전용 공개 API (5.1, 5.3, 6.1 ~ 6.5, 6.9, 8.1, 12.1 ~ 12.2, 13.1)
+                        // 🔓 읽기 전용 공개 API (5.1, 5.3, 6.1 ~ 6.5, 6.9, 8.1, 12.1 ~ 12.2, 13.1, 14.1 ~ 14.3)
                         .requestMatchers(HttpMethod.GET,
                                 "/api/blogs/**",
                                 "/api/posts", "/api/posts/search", "/api/posts/*/comments", "/api/posts/*/backlinks",
                                 "/api/tags/*/posts",
                                 "/api/topics",
                                 "/api/time-capsules/opened",
+                                "/api/universe",
                                 "/uploads/**").permitAll()
                         // 예외가 나면 Spring이 /error로 보내요. 막혀 있으면 진짜 에러가 401로 가려져요
                         .requestMatchers("/error").permitAll()

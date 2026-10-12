@@ -70,13 +70,13 @@ export default function PostDetailPage() {
     return (
       <article className="mx-auto max-w-3xl space-y-6">
         <header className="space-y-2">
-          <p className="text-sm font-medium text-violet-600">⏳ 타임캡슐</p>
+          <p className="text-sm font-medium text-violet-600">{post.recipient ? '💌 나에게 온 타임캡슐' : '⏳ 타임캡슐'}</p>
           <h1 className="text-2xl font-bold sm:text-3xl">{post.title}</h1>
           <p className="text-sm text-gray-500">
             <Link to={`/@${username}`} className="font-medium text-gray-800 hover:text-indigo-600">
               {post.author.nickname}
             </Link>
-            의 기록
+            {post.recipient ? `님이 ${post.recipient.nickname}님에게 보낸 기록이에요. 열리면 나만 볼 수 있어요.` : '의 기록'}
           </p>
         </header>
         <SealedCapsule capsule={capsule} onOpen={() => setReloadCount((n) => n + 1)} />
@@ -101,6 +101,11 @@ export default function PostDetailPage() {
           {hidden && <span className="rounded bg-gray-100 px-2 py-0.5 text-gray-600">🔒 비공개</span>}
           {capsule && (
             <span className="rounded bg-violet-50 px-2 py-0.5 text-violet-700">⏳ {formatDate(capsule.sealedAt)}에 봉인된 기록</span>
+          )}
+          {post.recipient && (
+            <span className="rounded bg-pink-50 px-2 py-0.5 text-pink-700">
+              💌 {post.isOwner ? `${post.recipient.nickname}님에게 보낸 캡슐` : `${post.author.nickname}님이 나에게 보낸 캡슐`}
+            </span>
           )}
         </div>
         <h1 className="text-2xl font-bold sm:text-3xl">{post.title}</h1>

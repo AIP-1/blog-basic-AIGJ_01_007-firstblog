@@ -23,8 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 기록 그래프 "내 기록 우주" (GR-01 ~ GR-04).
- * 별은 최신 300개, 태그 선은 1,000개까지만 보내서 글이 많아도 화면과 쿼리가 무거워지지 않게 해요.
+ * 기록 우주 (GR-01 ~ GR-07). 블로그 하나의 우주(14.1)와 서비스 전체 우주(14.3)가 같은 방식으로 별과 선을 만들어요.
+ * 별 수와 태그 선 수에 상한을 둬서 글이 많아도 화면과 쿼리가 무거워지지 않게 해요.
  * 방문자에게 잠긴 타임캡슐은 선이 없는 홀로 떠 있는 별이에요 (본문·태그로 내용을 짐작할 수 없게).
  */
 @Service
@@ -32,25 +32,38 @@ import org.springframework.transaction.annotation.Transactional;
 public class GraphService {
 
     static final int MAX_NODES = 300;
+    static final int MAX_UNIVERSE_NODES = 500;
     static final int MAX_TAG_EDGES = 1000;
+    static final int MAX_UNIVERSE_TAG_EDGES = 1500;
 
     private final GraphRepository graphRepository;
     private final BlogService blogService;
 
+    /** API 14.1 블로그 하나의 우주: 주인은 비공개 글까지 */
     @Transactional(readOnly = true)
     public GraphResponse getGraph(String username, LoginUser me) {
         Blog blog = blogService.getActiveBlog(username);
         boolean owner = blogService.isOwner(blog, me);
-        Instant now = Instant.now();
-
         List<GraphNodeRow> rows = graphRepository.findNodes(blog.getId(), owner, PageRequest.of(0, MAX_NODES + 1));
-        boolean truncated = rows.size() > MAX_NODES;
+        return build(rows, MAX_NODES, MAX_TAG_EDGES, owner);
+    }
+
+    /** API 14.3 서비스 전체 우주: 모든 블로그의 공개 글만 (봉인 캡슐은 공개 조건에서 이미 빠져요) */
+    @Transactional(readOnly = true)
+    public GraphResponse getUniverse() {
+        List<GraphNodeRow> rows = graphRepository.findPublicNodes(PageRequest.of(0, MAX_UNIVERSE_NODES + 1));
+        return build(rows, MAX_UNIVERSE_NODES, MAX_UNIVERSE_TAG_EDGES, false);
+    }
+
+    private GraphResponse build(List<GraphNodeRow> rows, int maxNodes, int maxTagEdges, boolean owner) {
+        boolean truncated = rows.size() > maxNodes;
         if (truncated) {
-            rows = rows.subList(0, MAX_NODES);
+            rows = rows.subList(0, maxNodes);
         }
         if (rows.isEmpty()) {
             return new GraphResponse(List.of(), List.of(), false);
         }
+        Instant now = Instant.now();
 
         // 선을 이을 수 있는 별: 방문자에게 잠긴 캡슐은 빼요 (주인은 모두)
         Set<Long> connectable = rows.stream()
@@ -66,7 +79,7 @@ public class GraphService {
                 linkCount.merge(link.getSource(), 1, Integer::sum);
                 linkCount.merge(link.getTarget(), 1, Integer::sum);
             }
-            for (var tag : graphRepository.findTagEdges(connectable, MAX_TAG_EDGES)) {
+            for (var tag : graphRepository.findTagEdges(connectable, maxTagEdges)) {
                 edges.add(new Edge(tag.getSource(), tag.getTarget(), "TAG", tag.getWeight().intValue(),
                         Arrays.asList(tag.getTags().split(","))));
             }
@@ -86,8 +99,10 @@ public class GraphService {
                     hideDetails ? null : linkCount.getOrDefault(row.id(), 0),
                     hideDetails ? null : tags.getOrDefault(row.id(), List.of()),
                     hideDetails ? null : KstTime.of(row.publishedAt()),
+                    KstTime.of(row.writtenAt()),
                     sealed,
-                    sealed ? KstTime.of(row.publishedAt()) : null);
+                    sealed ? KstTime.of(row.publishedAt()) : null,
+                    row.username(), row.nickname());
         }).toList();
 
         return new GraphResponse(nodes, edges, truncated);

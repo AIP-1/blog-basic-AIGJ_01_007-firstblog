@@ -43,4 +43,11 @@ class MarkdownTextTest {
         assertThat(MarkdownText.firstImageUrl("이미지 없는 글")).isNull();
         assertThat(MarkdownText.summarize("   ")).isNull();
     }
+
+    @Test
+    @DisplayName("요약에서 [[번호|글자]] 글 연결은 글자만 남긴다")
+    void summarizeLinks() {
+        assertThat(MarkdownText.summarize("참고: [[17|JWT 정리]]와 [[3|스프링]]"))
+                .isEqualTo("참고: JWT 정리와 스프링");
+    }
 }

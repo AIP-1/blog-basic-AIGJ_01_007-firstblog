@@ -21,7 +21,8 @@ public record PostDetailResponse(
         int viewCount, int likeCount, boolean liked, boolean bookmarked, boolean isOwner,
         OffsetDateTime publishedAt, OffsetDateTime editedAt,
         TimeCapsuleInfo timeCapsule,  // 일반 글은 null
-        Map<Long, LinkTarget> linkedPosts   // 본문 [[번호|글자]] 링크 대상 (LK-02)
+        Map<Long, LinkTarget> linkedPosts,  // 본문 [[번호|글자]] 링크 대상 (LK-02)
+        UserSummary recipient               // 받는 사람 캡슐이면 받는 사람 (TC-07), 아니면 null
 ) {
     /** 타임캡슐 정보 (TC-03). locked면 방문자에게 본문을 보여주지 않은 응답이에요 */
     public record TimeCapsuleInfo(OffsetDateTime sealedAt, OffsetDateTime openAt, boolean locked) {
@@ -55,7 +56,11 @@ public record PostDetailResponse(
                 new BlogInfo(blog.getId(), blog.getName()),
                 viewCount, post.getLikeCount(), liked, bookmarked, isOwner,
                 KstTime.of(post.getPublishedAt()), KstTime.of(post.getEditedAt()),
-                TimeCapsuleInfo.of(post, false), linkedPosts);
+                TimeCapsuleInfo.of(post, false), linkedPosts, recipientOf(post));
+    }
+
+    private static UserSummary recipientOf(Post post) {
+        return post.getRecipient() == null ? null : UserSummary.from(post.getRecipient());
     }
 
     /** 방문자가 봉인된 타임캡슐을 열었을 때: 제목과 작성자, 봉인·개봉 시각만 (TC-03) */
@@ -70,6 +75,6 @@ public record PostDetailResponse(
                 new BlogInfo(blog.getId(), blog.getName()),
                 0, 0, false, false, false,
                 KstTime.of(post.getPublishedAt()), null,
-                TimeCapsuleInfo.of(post, true), Map.of());
+                TimeCapsuleInfo.of(post, true), Map.of(), recipientOf(post));
     }
 }

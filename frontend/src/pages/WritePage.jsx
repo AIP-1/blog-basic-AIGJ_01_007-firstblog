@@ -139,17 +139,19 @@ export default function WritePage() {
 
   const publish = () => {
     const openAt = mode !== 'published' && capsule.enabled ? kstInputToIso(capsule.openAt) : null
+    const recipientUsername = openAt && capsule.recipient?.trim() ? capsule.recipient.trim() : null
     if (capsule.enabled && mode !== 'published') {
       if (!capsule.openAt) return setError('열리는 시각을 정해 주세요.')
-      if (!window.confirm(`${formatDateTime(openAt)}에 열리는 타임캡슐로 봉인할까요?\n열릴 때까지 수정할 수 없어요.`)) return
+      const to = recipientUsername ? `@${recipientUsername}님에게 보내는 ` : ''
+      if (!window.confirm(`${formatDateTime(openAt)}에 열리는 ${to}타임캡슐로 봉인할까요?\n열릴 때까지 수정할 수 없어요.`)) return
     }
     return run(async () => {
       const result =
         mode === 'published'
           ? await updatePost(postId, body())
           : draftId
-            ? await publishDraft(draftId, { ...body(), openAt })
-            : await createPost({ ...body(), openAt })
+            ? await publishDraft(draftId, { ...body(), openAt, recipientUsername })
+            : await createPost({ ...body(), openAt, recipientUsername })
       setDirty(false)
       navigate(`/@${user.username}/posts/${result.id ?? postId}`)
     })

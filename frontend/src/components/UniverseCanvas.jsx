@@ -6,16 +6,20 @@ const LOCKED = '#8b5cf6'
 const radiusOf = (n) => (n.locked ? 5 : Math.min(18, 4 + Math.sqrt((n.linkCount ?? 0) * 4 + (n.likeCount ?? 0)) * 2))
 
 /**
- * 기록 그래프 캔버스 (GR-02 ~ GR-04): d3-force가 자리를 계산하고 Canvas에 직접 그려요.
+ * 기록 그래프 캔버스 (GR-02 ~ GR-07): d3-force가 자리를 계산하고 Canvas에 직접 그려요.
  * 끌기(빈 곳: 화면 이동, 별: 별 이동), 휠·두 손가락으로 확대, 별을 누르면 onSelect(node).
  * focusId가 바뀌면 그 별로 화면을 옮겨요. highlightIds는 검색 결과 강조예요.
+ * visibleUntil(ms)이 있으면 그 시각까지 쓴 별만 그려요 (타임랩스, GR-05). 새로 보이는 별은 태어나는 효과가 있어요.
+ * colorOf(node)를 주면 별 색을 바꿔요 (서비스 전체 우주는 블로그별 색). groupOf(node)를 주면 같은 그룹끼리 모여요 (은하).
  */
-export default function UniverseCanvas({ graph, onSelect, highlightIds, focusId }) {
+export default function UniverseCanvas({ graph, onSelect, highlightIds, focusId, visibleUntil = null, colorOf, groupOf }) {
   const wrapRef = useRef(null)
   const canvasRef = useRef(null)
   const stateRef = useRef(null) // 매 프레임 쓰는 값 (렌더링과 무관해서 ref에 둬요)
   const [hover, setHover] = useState(null) // { node, x, y }
   const select = useEffectEvent((node) => onSelect(node))
+  const pickColor = useEffectEvent((node) => colorOf?.(node))
+  const pickGroup = useEffectEvent((node) => groupOf?.(node))
 
   // 시뮬레이션과 입력 처리: 그래프가 바뀔 때만 새로 만들어요
   useEffect(() => {
@@ -24,7 +28,7 @@ export default function UniverseCanvas({ graph, onSelect, highlightIds, focusId 
     const ctx = canvas.getContext('2d')
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    const nodes = graph.nodes.map((n) => ({ ...n, r: radiusOf(n) }))
+    const nodes = graph.nodes.map((n) => ({ ...n, r: radiusOf(n), born: Number(new Date(n.writtenAt ?? n.publishedAt ?? 0)), color: pickColor(n) }))
     const byId = new Map(nodes.map((n) => [n.id, n]))
     const links = graph.edges
       .filter((e) => byId.has(e.source) && byId.has(e.target))
@@ -32,18 +36,27 @@ export default function UniverseCanvas({ graph, onSelect, highlightIds, focusId 
 
     const s = {
       nodes, links, byId, view: { x: 0, y: 0, k: 1 }, width: 0, height: 0, dpr: window.devicePixelRatio || 1,
-      highlight: new Set(), hovered: null, userMoved: false, pointers: new Map(), drag: null, pinch: null, raf: 0, start: performance.now(),
+      highlight: new Set(), hovered: null, userMoved: false, until: null, appearedAt: new Map(), pointers: new Map(), drag: null, pinch: null, raf: 0, start: performance.now(),
       dust: Array.from({ length: 120 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.2, a: Math.random() })),
     }
     stateRef.current = s
+
+    // 은하: 그룹(블로그)마다 원 위에 중심점을 두고 그쪽으로 끌어당겨요 (GR-06)
+    const groups = [...new Set(nodes.map((n) => pickGroup(n)).filter(Boolean))]
+    if (groups.length > 1) {
+      const radius = 160 + 60 * Math.sqrt(groups.length)
+      const anchors = new Map(groups.map((g, i) => [g, {
+        x: radius * Math.cos((2 * Math.PI * i) / groups.length), y: radius * Math.sin((2 * Math.PI * i) / groups.length) }]))
+      for (const n of nodes) n.anchor = anchors.get(pickGroup(n))
+    }
 
     const sim = forceSimulation(nodes)
       .force('link', forceLink(links).id((d) => d.id)
         .distance((l) => (l.type === 'LINK' ? 90 : 140))
         .strength((l) => (l.type === 'LINK' ? 0.7 : Math.min(0.4, 0.08 * (l.weight ?? 1)))))
       .force('charge', forceManyBody().strength(-320))
-      .force('x', forceX(0).strength(0.04))
-      .force('y', forceY(0).strength(0.04))
+      .force('x', forceX((d) => d.anchor?.x ?? 0).strength((d) => (d.anchor ? 0.12 : 0.04)))
+      .force('y', forceY((d) => d.anchor?.y ?? 0).strength((d) => (d.anchor ? 0.12 : 0.04)))
       .force('collide', forceCollide((d) => d.r + 14))
     if (reduceMotion) {
       sim.stop()
@@ -62,11 +75,13 @@ export default function UniverseCanvas({ graph, onSelect, highlightIds, focusId 
     const observer = new ResizeObserver(resize)
     observer.observe(wrap)
 
+    const isShown = (n) => s.until == null || n.born <= s.until
     const toWorld = (sx, sy) => ({ x: (sx - s.view.x) / s.view.k, y: (sy - s.view.y) / s.view.k })
     const nodeAt = (sx, sy) => {
       const p = toWorld(sx, sy)
       let best = null
       for (const n of nodes) {
+        if (!isShown(n)) continue
         const d = Math.hypot(n.x - p.x, n.y - p.y)
         if (d <= n.r + 6 / s.view.k && (!best || d < best.d)) best = { n, d }
       }
@@ -195,6 +210,7 @@ export default function UniverseCanvas({ graph, onSelect, highlightIds, focusId 
 
       for (const l of links) {   // 선: 태그(흐린 점선) → 링크(밝은 실선 + 화살표)
         const a = l.source, b = l.target
+        if (!isShown(a) || !isShown(b)) continue
         if (l.type === 'TAG') {
           ctx.setLineDash([3, 4])
           ctx.strokeStyle = `rgba(148,163,184,${Math.min(0.5, 0.12 + 0.08 * (l.weight ?? 1))})`
@@ -223,14 +239,29 @@ export default function UniverseCanvas({ graph, onSelect, highlightIds, focusId 
       ctx.setLineDash([])
 
       const labels = []
-      for (const n of nodes) {   // 별: 토픽 색 + 빛번짐, 잠긴 캡슐은 보라색으로 천천히 깜빡여요
-        const color = n.locked ? LOCKED : TOPIC_COLORS[n.topic] ?? NO_TOPIC_COLOR
+      for (const n of nodes) {   // 별: 토픽(또는 블로그) 색 + 빛번짐, 잠긴 캡슐은 보라색으로 천천히 깜빡여요
+        if (!isShown(n)) {
+          s.appearedAt.delete(n.id)
+          continue
+        }
+        if (!s.appearedAt.has(n.id)) s.appearedAt.set(n.id, time)
+        const age = (time - s.appearedAt.get(n.id)) / 600   // 태어나는 효과: 0.6초 동안 커지며 빛이 퍼져요
+        const grow = s.until == null || age >= 1 ? 1 : 1 + 2.70158 * (age - 1) ** 3 + 1.70158 * (age - 1) ** 2
+        const color = n.locked ? LOCKED : n.color ?? TOPIC_COLORS[n.topic] ?? NO_TOPIC_COLOR
+        if (s.until != null && age < 1) {
+          ctx.globalAlpha = 1 - age
+          ctx.strokeStyle = color
+          ctx.lineWidth = 2 / view.k
+          ctx.beginPath()
+          ctx.arc(n.x, n.y, n.r + age * 30, 0, Math.PI * 2)
+          ctx.stroke()
+        }
         ctx.globalAlpha = n.locked ? 0.35 + 0.35 * Math.abs(Math.sin(t * 1.5 + n.id)) : 1
         ctx.shadowColor = color
         ctx.shadowBlur = (n.locked ? 8 : 14) * view.k
         ctx.fillStyle = color
         ctx.beginPath()
-        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2)
+        ctx.arc(n.x, n.y, Math.max(0.5, n.r * grow), 0, Math.PI * 2)
         ctx.fill()
         ctx.shadowBlur = 0
         ctx.globalAlpha = 1
@@ -278,6 +309,11 @@ export default function UniverseCanvas({ graph, onSelect, highlightIds, focusId 
     }
   }, [graph])
 
+  // 타임랩스: 이 시각까지 쓴 별만 (null이면 모두)
+  useEffect(() => {
+    if (stateRef.current) stateRef.current.until = visibleUntil
+  }, [visibleUntil])
+
   // 검색 강조
   useEffect(() => {
     if (stateRef.current) stateRef.current.highlight = new Set(highlightIds)
@@ -307,6 +343,7 @@ export default function UniverseCanvas({ graph, onSelect, highlightIds, focusId 
         <div className="pointer-events-none absolute z-10 max-w-64 rounded-md bg-white/95 px-3 py-2 text-xs text-gray-800 shadow-lg"
           style={{ left: Math.max(0, hover.x), top: hover.y }}>
           <p className="font-semibold">{hover.node.locked ? '🔒 ' : ''}{hover.node.title}</p>
+          {groupOf && hover.node.nickname && <p className="text-indigo-600">{hover.node.nickname}의 기록</p>}
           {hover.node.locked ? (
             <p className="mt-0.5 text-violet-700">봉인된 타임캡슐</p>
           ) : (

@@ -25,6 +25,12 @@ public class GraphController {
         return graphService.getGraph(username, me);
     }
 
+    /** API 14.3 서비스 전체 우주 (🔓, 모든 블로그의 공개 글) */
+    @GetMapping("/api/universe")
+    public GraphResponse getUniverse() {
+        return graphService.getUniverse();
+    }
+
     /** API 14.2 기록 잔디 (🔓, 주인이면 비공개 글 포함) */
     @GetMapping("/api/blogs/{username}/activity")
     public ActivityResponse getActivity(@PathVariable String username, @AuthenticationPrincipal LoginUser me) {

@@ -20,6 +20,8 @@ import com.ownlog.post.dto.PostCreateResponse;
 import com.ownlog.post.dto.PostRequest;
 import com.ownlog.post.repository.PostRepository;
 import com.ownlog.tag.service.TagService;
+import com.ownlog.user.domain.User;
+import java.time.Instant;
 import com.ownlog.topic.service.TopicService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -37,6 +39,7 @@ public class DraftService {
     private final TopicService topicService;
     private final TagService tagService;
     private final PostLinkService postLinkService;
+    private final CapsuleRecipientResolver recipientResolver;
 
     /** API 7.1 처음 임시저장 → 받은 id로 다음부터는 7.2를 호출해요 */
     @Transactional
@@ -88,12 +91,14 @@ public class DraftService {
     @Transactional
     public PostCreateResponse publish(Long postId, LoginUser me, PostRequest request) {
         Post draft = getMyDraft(postId, me);
+        Instant openAt = TimeCapsulePolicy.openAtOrNull(request.openAt());
+        User recipient = recipientResolver.resolve(request.recipientUsername(), openAt, me);
         draft.publishDraft(categoryService.getCategoryForPost(draft.getBlog(), request.categoryId()),
                 topicService.getTopicOrNull(request.topicId()),
                 request.title().strip(), request.content(), request.thumbnailUrl(),
                 Visibility.orPublic(request.visibility()),
                 tagService.resolveTags(request.tags()),
-                TimeCapsulePolicy.openAtOrNull(request.openAt()));
+                openAt, recipient);
         postLinkService.sync(draft);
         return new PostCreateResponse(draft.getId(), me.username());
     }

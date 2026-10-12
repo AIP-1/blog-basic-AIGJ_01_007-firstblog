@@ -28,7 +28,10 @@ public record PostRequest(
 
         Visibility visibility,  // null → PUBLIC
 
-        OffsetDateTime openAt   // 타임캡슐 개봉 시각 (TC-01). null → 일반 글. 발행 글 수정(6.7)에서는 무시해요
+        OffsetDateTime openAt,  // 타임캡슐 개봉 시각 (TC-01). null → 일반 글. 발행 글 수정(6.7)에서는 무시해요
+
+        @Size(max = 20, message = "받는 사람 아이디는 20자 이하여야 해요.")
+        String recipientUsername   // 받는 사람 (TC-07). 타임캡슐일 때만. 발행 글 수정(6.7)에서는 무시해요
 ) {
     /** 태그 규칙 (8장 입력 규칙). 임시저장 요청(DraftRequest)도 같은 규칙을 써요 */
     public static final String TAG_REGEX = "^\\s*[가-힣a-zA-Z0-9_-]{1,20}\\s*$";

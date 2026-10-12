@@ -1,4 +1,4 @@
-// 시연용 데이터 넣기: 모든 기능을 바로 써 볼 수 있게 API로 회원 5명과 글·댓글·좋아요 등을 만들어요.
+// 시연용 데이터 넣기: 모든 기능을 바로 써 볼 수 있게 API로 회원 5명과 글·댓글·좋아요·받는 사람 캡슐 등을 만들어요.
 //
 //   node scripts/seed-demo.mjs                         (로컬: http://localhost:8080)
 //   BASE=https://ownlog.java21.net node scripts/seed-demo.mjs   (서버)
@@ -204,6 +204,12 @@ await post(tn, 'capsuleYear', { title: '1년 뒤 다시 갈 부산', topic: 'tra
   body: '1년 뒤에도 해운대 아침 바다를 보러 가자.' })
 await post(rn, 'capsulePrivate', { title: '100일 뒤 체중 (나만)', tags: ['운동'], visibility: 'PRIVATE', openAt: inMinutes(60 * 24 * 100), body: '비공개 캡슐' })
 
+// 받는 사람이 있는 타임캡슐 (보낸 사람과 받는 사람만 봐요): 3분 뒤 열리는 것, 이틀 뒤, 한 달 뒤
+await call('POST', '/posts', bw.token, { title: '코드파도님께, 발표 끝나고 열어 보세요', content: '## 2주 동안 정말 수고 많았어요\n\n책 한 권 추천할게요: [[' + bw.posts.cleancode.id + '|클린 코드 독후감]]',
+  tags: ['편지'], openAt: inMinutes(3), recipientUsername: 'codewave' })
+await call('POST', '/posts', rn.token, { title: '수료 축하 편지', content: '같이 달려서 즐거웠어요! 🏃', tags: ['편지'], openAt: inMinutes(60 * 48), recipientUsername: 'codewave' })
+await call('POST', '/posts', cw.token, { title: '여행노트님께 드리는 부산 맛집 지도', content: '다음 부산 여행 때 열어 보세요.', tags: ['편지', '부산'], openAt: inMinutes(60 * 24 * 30), recipientUsername: 'tripnote' })
+
 // ---------------------------------------------------------------------------------
 // 임시저장, 수정한 글
 // ---------------------------------------------------------------------------------
@@ -286,5 +292,5 @@ if (process.env.LOCAL_SQL) {
 }
 
 const total = Object.values(U).reduce((n, u) => n + Object.keys(u.posts).length, 0)
-console.log(`완료: 회원 ${PEOPLE.length}명, 발행 글 ${total}개 (타임캡슐 4개 포함), 임시저장 3개. 비밀번호는 모두 ${PASSWORD}`)
+console.log(`완료: 회원 ${PEOPLE.length}명, 발행 글 ${total + 3}개 (타임캡슐 4개, 받는 사람 캡슐 3개 포함), 임시저장 3개. 비밀번호는 모두 ${PASSWORD}`)
 console.log(`곧 열리는 타임캡슐: ${API.replace('/api', '')} → /@codewave/posts/${cw.posts.capsule3.id} (3분 뒤 열려요)`)

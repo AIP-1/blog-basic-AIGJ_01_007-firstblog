@@ -15,6 +15,7 @@ import com.ownlog.post.dto.PostCard;
 import com.ownlog.post.dto.PostCardRow;
 import com.ownlog.post.dto.PostDetailResponse;
 import com.ownlog.post.dto.PostSort;
+import com.ownlog.post.dto.ReceivedCapsuleItem;
 import com.ownlog.post.dto.TagPostsResponse;
 import com.ownlog.post.dto.TimeCapsuleItem;
 import com.ownlog.post.repository.PostRepository;
@@ -24,6 +25,7 @@ import com.ownlog.topic.service.TopicService;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -62,9 +64,11 @@ public class PostQueryService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
         boolean isOwner = blogService.isOwner(blog, me);
-        if (!isOwner && !post.isVisibleToPublic()) {
-            if (post.isSealed() && post.isPublicExceptSeal()) {
-                return PostDetailResponse.locked(post);                     // 잠금 카드만, 조회수는 세지 않아요 (TC-03)
+        Long viewerId = me == null ? null : me.id();
+        if (!post.isViewableBy(viewerId)) {
+            // 봉인만 안 풀린 공개 캡슐이나, 나에게 온 캡슐이면 잠금 카드만 (TC-03, TC-08). 조회수는 세지 않아요
+            if (post.isSealed() && (post.isPublicExceptSeal() || post.isRecipient(viewerId))) {
+                return PostDetailResponse.locked(post);
             }
             throw new BusinessException(ErrorCode.POST_NOT_FOUND);
         }
@@ -135,6 +139,19 @@ public class PostQueryService {
         Blog blog = blogService.getActiveBlog(username);
         return postRepository.findSealedCapsules(blog.getId(), blogService.isOwner(blog, me), PageRequest.of(0, 20))
                 .stream().map(TimeCapsuleItem::from).toList();
+    }
+
+    /** API 12.3 나에게 온 타임캡슐: 아직 안 열린 것(개봉 빠른 순) 다음에 열린 것(최근 개봉 순) */
+    @Transactional(readOnly = true)
+    public List<ReceivedCapsuleItem> getReceivedCapsules(LoginUser me) {
+        Instant now = Instant.now();
+        return postRepository.findReceivedCapsules(me.id()).stream()
+                .map(row -> ReceivedCapsuleItem.from(row, now))
+                .sorted(Comparator.comparing(ReceivedCapsuleItem::opened)
+                        .thenComparing((a, b) -> a.opened()
+                                ? b.openAt().compareTo(a.openAt())
+                                : a.openAt().compareTo(b.openAt())))
+                .toList();
     }
 
     /** API 12.2 최근 7일 안에 열린 공개 타임캡슐 (최대 6개) */

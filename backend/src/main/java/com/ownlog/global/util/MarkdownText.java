@@ -34,6 +34,7 @@ public final class MarkdownText {
         String text = markdown
                 .replaceAll("(?s)```.*?```", " ")                             // 코드 블록
                 .replaceAll("`([^`]*)`", "$1")                                // 인라인 코드 → 글자만
+                .replaceAll("\\[\\[\\d{1,18}\\|([^\\]\\n]{1,100})]]", "$1")      // [[번호|글자]] 글 연결 → 글자만 (LK-02)
                 .replaceAll("!\\[[^\\]]*]\\([^)]*\\)", " ")                   // 이미지 제거
                 .replaceAll("\\[([^\\]]*)]\\([^)]*\\)", "$1")                 // 링크 → 글자만
                 .replaceAll("<[^>]+>", " ")                                   // HTML 태그

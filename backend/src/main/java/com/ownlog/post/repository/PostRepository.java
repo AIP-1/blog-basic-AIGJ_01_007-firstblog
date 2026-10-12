@@ -10,6 +10,7 @@ import com.ownlog.link.dto.LinkedPostRow;
 import com.ownlog.post.domain.Post;
 import com.ownlog.post.dto.DraftItemRow;
 import com.ownlog.post.dto.PostCardRow;
+import com.ownlog.post.dto.ReceivedCapsuleRow;
 import com.ownlog.post.dto.TimeCapsuleRow;
 import java.time.Instant;
 import java.util.Collection;
@@ -97,6 +98,15 @@ public interface PostRepository extends JpaRepository<Post, Long> {
              order by p.publishedAt asc, p.id asc
             """)
     List<TimeCapsuleRow> findSealedCapsules(Long blogId, boolean owner, Pageable pageable);
+
+    /** 12.3 나에게 온 타임캡슐 (보낸 사람 정보와 함께) */
+    @Query("""
+            select new com.ownlog.post.dto.ReceivedCapsuleRow(p.id, p.title, u.username, u.nickname, u.profileImageUrl,
+                                                              u.status, p.sealedAt, p.publishedAt)
+              from Post p join p.blog b join b.user u
+             where p.recipient.id = :userId and p.status = com.ownlog.post.domain.PostStatus.PUBLISHED
+            """)
+    List<ReceivedCapsuleRow> findReceivedCapsules(Long userId);
 
     /** 12.2 최근 열린 타임캡슐: 공개 조건 + 개봉 시각이 since 이후, 최근 개봉 순 */
     @Query(SELECT_CARD + FROM_CARD + " where " + PUBLIC_CONDITION

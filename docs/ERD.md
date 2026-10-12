@@ -206,6 +206,7 @@ erDiagram
 | view_count | INT | N | `0` | 작성자 본인 조회는 제외해요 |
 | like_count | INT | N | `0` | 인기순 정렬용 비정규화 컬럼. 좋아요 추가나 취소와 **같은 트랜잭션**에서 바꿔요 |
 | published_at | TIMESTAMPTZ | Y | | 처음 발행한 시각. 최신순 정렬과 "최근 7일" 기준이에요. **타임캡슐이면 개봉 시각(미래)이에요** (V2) |
+| recipient_id | BIGINT | Y | | FK → users. **받는 사람이 있는 타임캡슐**의 받는 사람 (V4, TC-07). CHECK `ck_posts_recipient_capsule`: 받는 사람이 있으면 타임캡슐(`sealed_at` 있음)이고 `visibility = 'PRIVATE'`여야 해요 |
 | sealed_at | TIMESTAMPTZ | Y | | **타임캡슐을 봉인한(실제로 쓴) 시각.** NULL이면 일반 글이에요 (V2, TC-01). `sealed_at < published_at`을 CHECK 제약 `ck_posts_capsule_order`로 보장해요 |
 | edited_at | TIMESTAMPTZ | Y | | **발행 후 내용을 수정한 시각.** 화면의 "수정일"이에요 (P-05). **제목, 본문, 썸네일, 태그가 바뀔 때만** 갱신해요 (카테고리 이동, 공개 범위 변경은 제외). NULL이면 수정한 적이 없는 글이에요 |
 | created_at | TIMESTAMPTZ | N | | |
@@ -411,6 +412,7 @@ INSERT INTO topics (slug, name, display_order) VALUES
 | posts | `(blog_id, published_at) WHERE sealed_at IS NOT NULL` | 곧 열리는 타임캡슐 (TC-06, V2) |
 | posts | `(published_at DESC) WHERE sealed_at IS NOT NULL` | 최근 열린 타임캡슐 (TC-06, V2) |
 | post_links | `(target_post_id)` | 백링크 (LK-03, V3) |
+| posts | `(recipient_id) WHERE recipient_id IS NOT NULL` | 받은 타임캡슐 (TC-09, V4) |
 | blogs | `(user_id)` | 회원의 블로그 찾기 |
 | categories | `UNIQUE(blog_id) WHERE is_default = true` | 기본 카테고리를 1개로 보장 |
 
@@ -435,6 +437,7 @@ AND p.published_at <= now()   -- 봉인된 타임캡슐 제외 (V2, TC-03)
 - **이 조건은 리포지토리 한 곳에 공통으로 정의하고**, 메인, 검색, 태그, 블로그 홈, 카테고리별 목록, 북마크 목록, 글 상세, 사이드바 글 수가 모두 이 조건을 거쳐요. 조회마다 조건을 따로 쓰면 하나만 빠뜨려도 숨긴 글이 노출되기 때문이에요.
 - 볼 수 없는 글에 대한 상세 조회, 좋아요, 댓글, 북마크, 신고 요청에는 **404(존재하지 않는 글)** 로 응답해요.
 - 예외: **봉인만 안 풀린 공개 타임캡슐**의 상세는 404 대신 잠금 응답(제목·봉인·개봉 시각만)을 줘요 (TC-03).
+- 예외: **받는 사람이 있는 캡슐**(항상 비공개)은 받는 사람에게도 보여요. 열리기 전에는 잠금 응답, 열린 뒤에는 본문까지 (TC-08). 그래서 "이 사람이 볼 수 있는 글"은 `Post.isViewableBy(회원)` = 발행 글이면서 (주인 OR 공개 조건 OR (받는 사람 AND 열림))이에요.
 - 타임캡슐의 `published_at`에 개봉 시각을 넣기 때문에 마지막 한 줄로 모든 목록에서 봉인 글이 빠지고, 열리는 순간 최신순 맨 위에 나타나요. 엔티티 쪽 같은 판단은 `Post.isVisibleToPublic()`이에요.
 - 3단계 테스트에서 **"비공개 카테고리의 글이 각 목록과 상세에 나오지 않는지"** 를 반드시 검증해요.
 

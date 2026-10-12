@@ -3,6 +3,7 @@ package com.ownlog.link.service;
 import com.ownlog.global.error.BusinessException;
 import com.ownlog.global.error.ErrorCode;
 import com.ownlog.global.security.LoginUser;
+import com.ownlog.global.util.KstTime;
 import com.ownlog.global.util.LikePattern;
 import com.ownlog.link.dto.LinkTarget;
 import com.ownlog.link.dto.LinkedPostItem;
@@ -65,7 +66,9 @@ public class PostLinkService {
         for (Long id : ids) {
             Post target = found.get(id);
             result.put(id, target != null && target.isViewableBy(viewerId)
-                    ? new LinkTarget(true, target.getBlog().getUser().getUsername(), target.getTitle())
+                    ? new LinkTarget(true, target.getBlog().getUser().getUsername(), target.getTitle(),
+                            target.getBlog().getUser().getNickname(), target.getSummary(), target.getThumbnailUrl(),
+                            KstTime.of(target.getPublishedAt()))
                     : LinkTarget.INACCESSIBLE);
         }
         return result;

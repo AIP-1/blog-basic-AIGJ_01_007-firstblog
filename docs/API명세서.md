@@ -73,10 +73,12 @@
 | 11.1 | POST | `/api/images` | 이미지 업로드 | 🔒 | P-03 |
 | 12.1 | GET | `/api/blogs/{username}/time-capsules` | 곧 열리는 타임캡슐 | 🔓 | TC-06 |
 | 12.2 | GET | `/api/time-capsules/opened` | 최근 열린 타임캡슐 | 🔓 | TC-06 |
+| 12.3 | GET | `/api/users/me/time-capsules` | 받은 타임캡슐 | 🔒 | TC-09 |
 | 13.1 | GET | `/api/posts/{postId}/backlinks` | 이 글을 언급한 글 | 🔓 | LK-03 |
 | 13.2 | GET | `/api/posts/link-suggestions` | `[[` 자동완성 | 🔒 | LK-01 |
 | 14.1 | GET | `/api/blogs/{username}/graph` | 기록 우주 (별과 선) | 🔓 | GR-01 ~ GR-04 |
 | 14.2 | GET | `/api/blogs/{username}/activity` | 기록 잔디 | 🔓 | AC-01 ~ AC-04 |
+| 14.3 | GET | `/api/universe` | 서비스 전체 우주 | 🔓 | GR-06, GR-07 |
 
 ---
 
@@ -252,6 +254,8 @@
 | `DRAFT_NOT_FOUND` | 404 | 존재하지 않는 임시저장 글이에요. | 7.2 ~ 7.6 |
 | `INVALID_OPEN_AT` | 400 | 열리는 시각은 1분 뒤부터 10년 안으로 정해 주세요. | 6.6, 7.6 (`openAt`) |
 | `TIME_CAPSULE_SEALED` | 400 | 봉인된 타임캡슐은 열리기 전까지 수정할 수 없어요. | 6.7 |
+| `INVALID_RECIPIENT` | 400 | 받는 사람을 찾을 수 없어요. 다른 회원의 아이디를 확인해 주세요. | 6.6, 7.6 (`recipientUsername`: 없음, 탈퇴, 자기 자신) |
+| `RECIPIENT_REQUIRES_CAPSULE` | 400 | 받는 사람은 타임캡슐에만 정할 수 있어요. | 6.6, 7.6 (`openAt` 없이 `recipientUsername`) |
 | **댓글** | | | |
 | `COMMENT_NOT_FOUND` | 404 | 존재하지 않는 댓글이에요. | 8.3, 8.4, 10.2 |
 | `INVALID_PARENT_COMMENT` | 400 | 이 댓글에는 답글을 달 수 없어요. | 8.2 (답글의 답글, 다른 글의 댓글, 삭제된 댓글) |
@@ -1165,9 +1169,9 @@
 ### 기존 API 변경
 | API | 변경 |
 |---|---|
-| 6.6 글 바로 발행, 7.6 임시저장 글 발행 | 요청에 `openAt`(선택, ISO-8601) 추가. 있으면 타임캡슐로 발행해요. 지금부터 1분 뒤 ~ 10년 뒤가 아니면 `INVALID_OPEN_AT` |
+| 6.6 글 바로 발행, 7.6 임시저장 글 발행 | 요청에 `openAt`(선택, ISO-8601) 추가. 있으면 타임캡슐로 발행해요. 지금부터 1분 뒤 ~ 10년 뒤가 아니면 `INVALID_OPEN_AT`. **`recipientUsername`**(선택, 앞의 `@`는 무시)을 함께 주면 받는 사람 캡슐이 되고 공개 범위는 항상 `PRIVATE`이에요 (TC-07) |
 | 6.7 발행 글 수정 | 봉인 중이면 `TIME_CAPSULE_SEALED`. `openAt`은 무시해요 (개봉 시각은 바꿀 수 없어요) |
-| 6.5 글 상세 | 응답에 `timeCapsule` 추가 (일반 글은 `null`). **방문자가 봉인 중인 공개 캡슐을 열면** 200으로 잠금 응답을 줘요: `content`, `thumbnailUrl`, `topic`은 `null`, `tags`는 `[]`, 조회수는 세지 않아요. 비공개 캡슐은 지금처럼 404 |
+| 6.5 글 상세 | 응답에 `recipient`(받는 사람 `UserSummary`, 없으면 `null`) 추가. **받는 사람**이 봉인 중인 캡슐을 열면 잠금 응답, 열린 뒤에는 일반 응답이에요. 그 밖의 사람에게는 404 (TC-08). 응답에 `timeCapsule` 추가 (일반 글은 `null`). **방문자가 봉인 중인 공개 캡슐을 열면** 200으로 잠금 응답을 줘요: `content`, `thumbnailUrl`, `topic`은 `null`, `tags`는 `[]`, 조회수는 세지 않아요. 비공개 캡슐은 지금처럼 404 |
 | 8.x, 9.x, 10.1 | 봉인 중인 글에 대한 요청은 404 (볼 수 없는 글과 같아요) |
 
 **6.6 요청 예시**
@@ -1199,6 +1203,20 @@
 
 **에러:** `USER_NOT_FOUND`
 
+### 12.3 받은 타임캡슐
+`GET /api/users/me/time-capsules` 🔒 · TC-09
+
+나에게 온(받는 사람이 나인) 캡슐을 줘요. **안 열린 것(개봉 빠른 순) → 열린 것(최근 개봉 순)** 순서예요.
+
+**응답 `200 OK`**
+```json
+[
+  { "id": 51, "title": "수료 축하 편지", "sender": { "username": "runner", "nickname": "아침러너", "profileImageUrl": null },
+    "sealedAt": "2026-10-12T13:54:00+09:00", "openAt": "2026-10-14T13:54:00+09:00", "opened": false }
+]
+```
+- `opened: true`면 상세(6.5)에서 본문을 볼 수 있어요.
+
 ### 12.2 최근 열린 타임캡슐
 `GET /api/time-capsules/opened` 🔓 · TC-06
 
@@ -1219,6 +1237,11 @@
 }
 ```
 - 화면은 `accessible: true`면 `/@{username}/posts/17` 링크, `false`면 "🔒 볼 수 없는 글"로 그려요. 잠금 응답(봉인된 타임캡슐)에서는 `{}`예요.
+- **링크 미리보기**(LK-06): `accessible: true`면 `nickname`, `summary`, `thumbnailUrl`, `publishedAt`도 줘요. 화면은 링크에 마우스를 올리면 이 값으로 카드를 띄워요.
+```json
+"17": { "accessible": true, "username": "nayoung", "title": "JWT 정리", "nickname": "나영",
+        "summary": "토큰 구조 Header.Payload.Signature...", "thumbnailUrl": null, "publishedAt": "2026-10-10T10:00:00+09:00" }
+```
 
 ### 13.1 이 글을 언급한 글 (백링크)
 `GET /api/posts/{postId}/backlinks` 🔓 · LK-03
@@ -1251,6 +1274,7 @@
 그 블로그의 글(별)과 관계(선)를 한 번에 줘요. 화면은 이 데이터로 d3-force 배치를 계산해서 Canvas에 그려요.
 
 - **별(nodes)**: 보는 사람이 볼 수 있는 그 블로그의 발행 글, 최신 300개까지. 방문자는 글·카테고리가 공개인 것만, 주인은 비공개 포함이에요. 봉인된 타임캡슐은 `locked: true`이고, **방문자에게는** 제목과 `openAt`만 줘요(토픽·좋아요·태그·연결 수 없음).
+- 별에는 **`writtenAt`**(쓴 시각, 타임캡슐은 봉인 시각: 타임랩스 GR-05에서 별이 태어나는 시각)과 **`username`·`nickname`**(그 글의 블로그)도 있어요.
 - **선(edges)**: `LINK`는 `source`가 `target`을 `[[링크]]`한 것(방향 있음), `TAG`는 두 글이 태그를 `weight`개 공유한 것(방향 없음, 공유 많은 순 최대 1,000개). 방문자에게 잠긴 캡슐에는 선이 없어요.
 - `truncated`: 글이 300개를 넘어서 잘렸는지.
 
@@ -1292,4 +1316,20 @@
 **6.4 블로그 글 목록 변경**: 쿼리 `date`(선택, `YYYY-MM-DD`) 추가. 그날(한국 날짜) 쓴 글만 줘요(타임캡슐은 봉인한 날). 형식이 틀리면 `INVALID_INPUT`.
 
 **에러:** `USER_NOT_FOUND`
+
+### 14.3 서비스 전체 우주
+`GET /api/universe` 🔓 · GR-06, GR-07
+
+**모든 블로그의 공개 글**(공개 조건 그대로: 비공개 글·비공개 카테고리·봉인된 캡슐·받는 사람 캡슐 제외)을 최신 500개까지 별로 주고, 그 사이의 `LINK`·`TAG` 선(태그 선은 최대 1,500개)을 줘요. 응답 모양은 14.1과 같아요. 화면은 별의 `username`으로 블로그(은하)를 나눠 색과 무리를 정해요.
+
+**응답 `200 OK`**
+```json
+{
+  "nodes": [ { "id": 17, "title": "JWT 인증 정리", "topic": "it", "likeCount": 4, "linkCount": 3, "tags": ["JWT"],
+               "publishedAt": "2026-10-10T10:00:00+09:00", "writtenAt": "2026-10-10T10:00:00+09:00",
+               "locked": false, "username": "codewave", "nickname": "코드파도" } ],
+  "edges": [ { "source": 31, "target": 17, "type": "LINK" } ],
+  "truncated": false
+}
+```
 

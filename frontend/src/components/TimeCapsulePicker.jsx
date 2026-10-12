@@ -15,7 +15,10 @@ const QUICK = [
   { label: '1년 뒤', minutes: 60 * 24 * 365 },
 ]
 
-/** 글쓰기의 "타임캡슐로 보내기" (TC-01, TC-02). value: { enabled, openAt("YYYY-MM-DDTHH:mm", KST) } */
+/**
+ * 글쓰기의 "타임캡슐로 보내기" (TC-01, TC-02, TC-07).
+ * value: { enabled, openAt("YYYY-MM-DDTHH:mm", KST), recipient(받는 사람 아이디, 선택) }
+ */
 export default function TimeCapsulePicker({ value, onChange, error }) {
   return (
     <div className={`rounded-lg border p-3 text-sm ${value.enabled ? 'border-violet-300 bg-violet-50' : 'border-gray-200 bg-white'}`}>
@@ -45,6 +48,15 @@ export default function TimeCapsulePicker({ value, onChange, error }) {
               {q.label}
             </button>
           ))}
+          <label className="flex w-full flex-wrap items-center gap-2 pt-1">
+            <span className="font-medium">💌 받는 사람 (선택)</span>
+            <span className="flex items-center rounded-md border border-gray-300 bg-white pl-2">
+              <span className="text-gray-400">@</span>
+              <input value={value.recipient ?? ''} onChange={(e) => onChange({ ...value, recipient: e.target.value.replace(/^@/, '') })}
+                placeholder="아이디" aria-label="받는 사람 아이디" maxLength={20} className="w-36 rounded-md px-1 py-1 focus:outline-none" />
+            </span>
+            <span className="text-xs text-gray-500">정하면 나와 받는 사람만 볼 수 있어요 (비공개)</span>
+          </label>
           <p className="w-full text-xs text-violet-700">봉인한 뒤에는 열릴 때까지 수정할 수 없어요. 작성자인 나는 언제든 볼 수 있어요.</p>
           {error && <p className="w-full text-red-600">{error}</p>}
         </div>
