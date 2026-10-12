@@ -9,7 +9,6 @@ import DraftsPage from './pages/DraftsPage'
 import LoginPage from './pages/LoginPage'
 import MainPage from './pages/MainPage'
 import NotFoundPage from './pages/NotFoundPage'
-import PostDetailPage from './pages/PostDetailPage'
 import ReceivedCapsulesPage from './pages/ReceivedCapsulesPage'
 import SearchPage from './pages/SearchPage'
 import SettingsPage from './pages/SettingsPage'
@@ -18,6 +17,8 @@ import TagPage from './pages/TagPage'
 
 // 마크다운 편집기가 커서 글쓰기 화면은 들어갈 때만 불러와요 (첫 화면 로딩을 가볍게)
 const WritePage = lazy(() => import('./pages/WritePage'))
+// 글 상세는 마크다운 표시(react-markdown + rehype-sanitize)가 커서 따로 불러와요. 메인·목록 화면은 이게 필요 없어요
+const PostDetailPage = lazy(() => import('./pages/PostDetailPage'))
 // 기록 우주는 그래프 라이브러리(d3-force)를 써서 이 화면에서만 불러와요
 const UniversePage = lazy(() => import('./pages/UniversePage'))
 const GlobalUniversePage = lazy(() => import('./pages/GlobalUniversePage'))
@@ -36,7 +37,7 @@ export default function App() {
         <Route path="/universe" element={<Suspense fallback={loadingFallback}><GlobalUniversePage /></Suspense>} />
         {/* /@아이디: React Router는 "/@:username"처럼 글자와 변수를 섞을 수 없어서 /:handle로 받고 화면에서 @를 확인해요 */}
         <Route path="/:handle" element={<BlogPage />} />
-        <Route path="/:handle/posts/:postId" element={<PostDetailPage />} />
+        <Route path="/:handle/posts/:postId" element={<Suspense fallback={loadingFallback}><PostDetailPage /></Suspense>} />
         <Route path="/:handle/universe" element={<Suspense fallback={loadingFallback}><UniversePage /></Suspense>} />
         {/* 🔒 로그인 필요 */}
         <Route path="/write" element={<RequireAuth><Suspense fallback={loadingFallback}><WritePage /></Suspense></RequireAuth>} />

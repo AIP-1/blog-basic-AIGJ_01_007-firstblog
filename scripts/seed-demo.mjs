@@ -3,6 +3,7 @@
 //   node scripts/seed-demo.mjs                         (로컬: http://localhost:8080)
 //   BASE=https://ownlog.java21.net node scripts/seed-demo.mjs   (서버)
 //   LOCAL_SQL=1 node scripts/seed-demo.mjs             (로컬 Docker DB면 예전 날짜로 옮겨서 기록 잔디를 채워요)
+//   LOCAL_SQL=1 DB_SCHEMA=e2e ...                      (public이 아닌 스키마에 넣었을 때)
 //
 // 모든 회원의 비밀번호는 ownlog1234 예요. 같은 회원이 이미 있으면 중복을 막으려고 멈춰요.
 import { execSync } from 'node:child_process'
@@ -287,7 +288,8 @@ if (process.env.LOCAL_SQL) {
               FROM posts p2 JOIN blogs b ON b.id = p2.blog_id JOIN users us ON us.id = b.user_id
              WHERE us.username = 'runner' AND p2.status = 'PUBLISHED' AND p2.sealed_at IS NULL) sub
      WHERE p.id = sub.id;`
-  execSync(`docker exec -i ownlog-postgres psql -U ownlog -d ownlog -q`, { input: sql })
+  const schema = process.env.DB_SCHEMA ? `SET search_path TO ${process.env.DB_SCHEMA};` : ''
+  execSync(`docker exec -i ownlog-postgres psql -U ownlog -d ownlog -q`, { input: schema + sql })
   console.log('기록 잔디용 날짜를 예전으로 옮겼어요 (로컬)')
 }
 

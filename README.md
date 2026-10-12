@@ -38,7 +38,7 @@
 | 백엔드 | Java 21, Spring Boot 4.1, Spring Security, Spring Data JPA, Flyway, JWT(jjwt) |
 | 프론트엔드 | React 19, Vite 8, React Router, Tailwind CSS 4, axios, react-markdown(+ rehype-sanitize), d3-force(기록 우주) |
 | 데이터베이스 | PostgreSQL 17 |
-| 테스트 | JUnit 5, MockMvc, Testcontainers(실제 PostgreSQL), 헤드리스 Chrome 화면 확인 |
+| 테스트 | JUnit 5, MockMvc, Testcontainers(실제 PostgreSQL), 헤드리스 Chrome 화면 점검(`e2e/`) |
 | 배포 | Docker, GitHub Actions, Nginx (수업 공용 서버) |
 
 ## 폴더 구조
@@ -55,6 +55,8 @@
 │           └── db/migration/     V1 테이블 생성, V2 타임캡슐, V3 글 연결, V4 받는 사람 캡슐, V5 요약 정리 (Flyway)
 ├── frontend/                 React SPA
 │   └── src/                  api, auth, components, hooks, pages, utils
+├── e2e/                      화면 점검 105개 (헤드리스 Chrome)
+├── scripts/seed-demo.mjs     시연용 데이터
 ├── deploy/deploy.sh          서버에서 컨테이너를 실행하는 스크립트
 ├── .github/workflows/        자동 배포 (GitHub Actions)
 ├── Dockerfile                화면 + API를 이미지 하나로 빌드
@@ -101,9 +103,12 @@ BASE=https://ownlog.java21.net node scripts/seed-demo.mjs   # 서버 (API로만 
 ### 테스트
 
 ```bash
-cd backend && ./gradlew test          # 통합·동시성·롤백 테스트 (Docker 필요)
+cd backend && ./gradlew test          # 백엔드 159개: 통합·동시성·롤백·권한 (Docker 필요)
 cd frontend && npm run lint && npm run build
+node e2e/run-all.mjs                  # 화면 점검 105개 (Chrome 필요, 자세한 내용은 e2e/README.md)
 ```
+
+화면 점검은 실제로 가입·글쓰기·탈퇴를 해서 DB에 테스트 데이터가 남아요. 시연 DB를 깨끗하게 두려면 [e2e/README.md](e2e/README.md)의 "별도 스키마에서 돌리기"를 써요.
 
 ## 배포
 
@@ -128,3 +133,20 @@ push → 테스트(백엔드 테스트, 프론트 린트·빌드)
 | `DB_ADDRESS`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `DB_SCHEMA` | 수업 DB(crowfoot) 접속 정보 |
 | `SSH_ADDRESS`, `SSH_ID`, `SSH_PASSWORD`, `SSH_PORT` | 배포 서버 접속 정보 |
 | `JWT_SECRET` (선택) | 없으면 서버에서 한 번 만들어 계속 사용해요 |
+
+## 앞으로의 계획 (2차 개발)
+
+MVP와 기록 유니버스를 마친 뒤, 실제 서비스로 키우기 위해 다음 순서로 확장할 계획이에요.
+
+| 우선순위 | 영역 | 내용 | 지금 준비된 것 |
+|---|---|---|---|
+| 1 | 🔔 알림 | 받은 타임캡슐이 열렸을 때, 내 글이 `[[연결]]`됐을 때, 댓글·답글 알림 | 받는 사람 캡슐, `post_links`, 댓글 구조 |
+| 2 | 🛡️ 관리자 | 신고 처리 화면, 회원 정지, 신고 당시 내용 스냅샷 | 신고 테이블과 중복 신고 방지, `users.role` 컬럼 |
+| 3 | 🔐 인증 강화 | Refresh Token(로그인 2시간 제한 해소), 로그인 시도 횟수 제한, 비밀번호 찾기(메일) | JWT 필터 구조, 탈퇴 회원 토큰 거부 |
+| 4 | 🔗 공유 | 카카오톡 등에 링크를 붙였을 때 제목·썸네일이 보이게 (서버에서 OG 태그 넣기) | 글 요약·썸네일 자동 지정 |
+| 5 | 🖼️ 이미지 | 업로드할 때 크기 줄이기·썸네일 만들기, 쓰이지 않는 이미지 정리 | 업로드 검증(형식·크기), 글 삭제 후 파일 삭제 이벤트 |
+| 6 | 🌌 기록 유니버스 | 다중 블로그, 여러 명에게 보내는 캡슐, 우주 공유 이미지, "1년 전 오늘" | 다중 블로그용 1:N 구조(요구사항 5.1) |
+| 7 | 🔍 검색 | 글이 많아져도 빠른 검색 (`pg_trgm` 또는 전문 검색) | 검색 API와 이스케이프 처리 |
+| 8 | 💾 운영 | DB·업로드 폴더 정기 백업, 무중단 배포, 오류 모니터링 | Docker 이미지 배포, 배포 전 DB 연결 확인 |
+| 9 | 🎨 화면 | 다크 모드, 블로그 꾸미기(스킨) | Tailwind 기반 컴포넌트 |
+
