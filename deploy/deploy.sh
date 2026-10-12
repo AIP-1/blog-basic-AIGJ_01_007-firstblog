@@ -40,7 +40,7 @@ fi
 echo "  DB 주소의 IP: $(getent hosts "$DB_ADDRESS" | awk '{print $1}' | head -1)"
 tcp_check='timeout 5 bash -c "</dev/tcp/$DB_ADDRESS/$DB_PORT" 2>/dev/null && echo OK || echo FAIL'
 host_result=$(bash -c "$tcp_check")
-container_result=$(docker run --rm -e DB_ADDRESS -e DB_PORT --entrypoint bash "${APP_NAME}:${IMAGE_TAG}" -c "$tcp_check")
+container_result=$(docker run --rm --network host -e DB_ADDRESS -e DB_PORT --entrypoint bash "${APP_NAME}:${IMAGE_TAG}" -c "$tcp_check")
 echo "  서버 → DB: $host_result / 컨테이너 → DB: $container_result"
 if [ "$container_result" != OK ]; then
   if [ "$host_result" = OK ]; then
@@ -57,10 +57,12 @@ docker rm -f "$APP_NAME" 2>/dev/null || true
 echo "▶ 새 컨테이너 실행 (포트 ${APP_PORT})"
 mkdir -p "$UPLOAD_DIR"
 # --user: 서버 계정 권한으로 실행해서 업로드 폴더에 쓸 수 있게 해요
+# --network host: 이 서버는 Docker 기본 네트워크에서 DB(내부망)에 닿지 않아서, 서버 네트워크를 그대로 써요
+#                 그래서 -p 대신 SERVER_PORT로 앱이 APP_PORT에서 직접 열려요
 # -e 이름만: 값은 이 스크립트의 환경변수에서 가져와요 (명령어 기록에 비밀값이 남지 않아요)
 docker run -d --name "$APP_NAME" --restart unless-stopped \
   --user "$(id -u):$(id -g)" \
-  -p "${APP_PORT}:8080" \
+  --network host -e SERVER_PORT="$APP_PORT" \
   --memory 768m -e JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75" \
   -e DB_ADDRESS -e DB_PORT -e DB_NAME -e DB_USERNAME -e DB_PASSWORD -e DB_SCHEMA -e JWT_SECRET \
   -v "$UPLOAD_DIR:/app/uploads" \
