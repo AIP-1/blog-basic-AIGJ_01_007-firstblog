@@ -82,14 +82,14 @@ public class PostService {
     /**
      * 수정·삭제 대상 확인 (API 명세서 1.3)
      * - 없거나 임시저장 글 → 404 (임시저장 글은 7.x API로 다뤄요)
-     * - 남의 글: 볼 수 있으면 403, 볼 수 없으면(비공개, 비공개 카테고리) 404
+     * - 남의 글: 볼 수 있으면(공개 글, 나에게 온 열린 캡슐) 403, 볼 수 없으면(비공개, 비공개 카테고리) 404
      */
     private Post getPostForOwner(Long postId, LoginUser me) {
         Post post = postRepository.findById(postId)
                 .filter(Post::isPublished)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
         if (!post.isOwnedBy(me.id())) {
-            throw new BusinessException(post.isVisibleToPublic() ? ErrorCode.FORBIDDEN : ErrorCode.POST_NOT_FOUND);
+            throw new BusinessException(post.isViewableBy(me.id()) ? ErrorCode.FORBIDDEN : ErrorCode.POST_NOT_FOUND);
         }
         return post;
     }

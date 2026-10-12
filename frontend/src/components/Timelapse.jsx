@@ -55,7 +55,8 @@ export default function Timelapse({ times, onChange }) {
         aria-label="타임랩스 날짜"
         className="min-w-40 flex-1 accent-indigo-600"
       />
-      <span className="w-44 text-right tabular-nums text-gray-600" aria-live="polite">
+      {/* 재생 중에는 매 프레임 바뀌어서 화면 읽기 프로그램에 알리지 않아요 */}
+      <span data-timelapse-status className="w-44 text-right tabular-nums text-gray-600" aria-live={playing ? 'off' : 'polite'}>
         {value == null ? '오늘' : formatDate(new Date(Math.max(value, start)).toISOString())} · 별 {shown}개
       </span>
       {value != null && !playing && (

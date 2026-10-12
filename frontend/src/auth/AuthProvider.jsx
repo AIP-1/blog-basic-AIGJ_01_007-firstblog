@@ -21,7 +21,9 @@ export default function AuthProvider({ children }) {
     api
       .get('/users/me', { skipAuthRedirect: true })
       .then(({ data }) => setUser(data))
-      .catch(() => tokenStorage.clear()) // 만료됐거나 탈퇴한 회원의 토큰이면 지우고 비회원으로 계속 봐요 (공개 화면에서 튕기지 않게)
+      // 만료됐거나 탈퇴한 회원의 토큰(401)이면 지우고 비회원으로 계속 봐요 (공개 화면에서 튕기지 않게).
+      // 네트워크 오류나 배포 중(502·503)이면 토큰을 남겨서, 다시 새로고침하면 로그인이 이어져요
+      .catch((err) => err.response?.status === 401 && tokenStorage.clear())
       .finally(() => setLoading(false))
   }, [])
 

@@ -8,7 +8,7 @@ import { useAsync } from '../hooks/useAsync'
 export default function TagPage() {
   const { tagName } = useParams()
   const [searchParams] = useSearchParams()
-  const page = Number(searchParams.get('page')) || 1
+  const page = Math.max(1, Math.floor(Number(searchParams.get('page'))) || 1)
   const result = useAsync(() => getTagPosts({ tag: tagName, page }), `${tagName}|${page}`)
 
   return (

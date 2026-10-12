@@ -74,7 +74,7 @@ export default function SignupPage() {
           value={form.username}
           onChange={change}
           error={fieldErrors.username}
-          hint={usernameHint ? usernameHint.text : form.username && `ownlog.com/@${form.username}`}
+          hint={usernameHint ? usernameHint.text : form.username && `ownlog.java21.net/@${form.username}`}
           hintTone={usernameHint?.tone}
           required
           maxLength={20}

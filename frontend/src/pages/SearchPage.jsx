@@ -8,7 +8,7 @@ import { useAsync } from '../hooks/useAsync'
 export default function SearchPage() {
   const [searchParams] = useSearchParams()
   const q = (searchParams.get('q') ?? '').trim()
-  const page = Number(searchParams.get('page')) || 1
+  const page = Math.max(1, Math.floor(Number(searchParams.get('page'))) || 1)
   const result = useAsync(() => (q ? searchPosts({ q, page }) : Promise.resolve(null)), `${q}|${page}`)
 
   if (!q) return <p className="py-16 text-center text-gray-500">검색어를 입력해 주세요.</p>

@@ -4,6 +4,7 @@ import com.ownlog.user.domain.PasswordPolicy;
 import com.ownlog.user.domain.UsernamePolicy;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import com.ownlog.global.validation.MaxUtf8Bytes;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -16,6 +17,7 @@ public record SignupRequest(
 
         @NotBlank(message = "비밀번호를 입력해 주세요.")
         @Pattern(regexp = PasswordPolicy.REGEX, message = PasswordPolicy.MESSAGE)
+        @MaxUtf8Bytes(value = PasswordPolicy.MAX_BYTES, message = PasswordPolicy.BYTES_MESSAGE)
         String password,
 
         @NotBlank(message = "비밀번호 확인을 입력해 주세요.")

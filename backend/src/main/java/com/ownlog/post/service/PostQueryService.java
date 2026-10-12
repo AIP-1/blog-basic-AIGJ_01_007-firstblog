@@ -130,7 +130,9 @@ public class PostQueryService {
             return new TagPostsResponse(tagName, PageResponse.from(Page.<PostCard>empty(pageable)));
         }
         Page<PostCardRow> rows = postRepository.findByTag(tagName, pageable);
-        return new TagPostsResponse(tag.get().getName(), PageResponse.from(rows.map(PostCard::from)));
+        // 저장된 표기(대소문자)는 공개 글이 있을 때만 알려줘요. 비공개·임시저장 글에만 있는 태그가 있는지 드러나지 않게
+        String shownName = rows.getTotalElements() > 0 ? tag.get().getName() : tagName;
+        return new TagPostsResponse(shownName, PageResponse.from(rows.map(PostCard::from)));
     }
 
     /** API 12.1 곧 열리는 타임캡슐 (최대 20개). 주인에게는 비공개 캡슐도 보여줘요 */

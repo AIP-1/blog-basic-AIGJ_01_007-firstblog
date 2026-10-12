@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { getUniverse } from '../api/blogs'
 import Timelapse from '../components/Timelapse'
@@ -12,7 +12,7 @@ export default function GlobalUniversePage() {
   const { data, error, loading } = useAsync(() => getUniverse(), 'universe')
   const [query, setQuery] = useState('')
   const [focusId, setFocusId] = useState(null)
-  const [until, setUntil] = useState(null)
+  const canvasRef = useRef(null) // 타임랩스는 캔버스에 직접 알려줘요 (GR-05)
 
   // 글이 많은 블로그부터 색을 정해요
   const galaxies = useMemo(() => {
@@ -22,6 +22,13 @@ export default function GlobalUniversePage() {
     return [...counts.values()].sort((a, b) => b.count - a.count).map((g, i) => ({ ...g, color: GALAXY_COLORS[i % GALAXY_COLORS.length] }))
   }, [data])
   const colorByUser = useMemo(() => new Map(galaxies.map((g) => [g.username, g.color])), [galaxies])
+  const times = useMemo(() => (data?.nodes ?? []).map((n) => Number(new Date(n.writtenAt))), [data])
+  // 블로그를 잇는 연결: 별 id → 블로그 지도를 한 번 만들어서 세요 (별마다 전체를 찾지 않게)
+  const crossLinks = useMemo(() => {
+    if (!data) return 0
+    const owner = new Map(data.nodes.map((n) => [n.id, n.username]))
+    return data.edges.filter((e) => e.type === 'LINK' && owner.get(e.source) !== owner.get(e.target)).length
+  }, [data])
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase()
     return q && data ? data.nodes.filter((n) => n.title.toLowerCase().includes(q)).map((n) => n.id) : []
@@ -30,11 +37,6 @@ export default function GlobalUniversePage() {
   if (loading) return <p className="py-16 text-center text-gray-500">우주를 불러오는 중…</p>
   if (error) return <p className="py-16 text-center text-red-600">{error}</p>
 
-  const crossLinks = data.edges.filter((e) => {
-    if (e.type !== 'LINK') return false
-    const user = (id) => data.nodes.find((n) => n.id === id)?.username
-    return user(e.source) !== user(e.target)
-  }).length
 
   return (
     <div className="space-y-4">
@@ -46,7 +48,7 @@ export default function GlobalUniversePage() {
           </p>
         </div>
         {data.nodes.length > 1 && (
-          <form onSubmit={(e) => { e.preventDefault(); if (matches[0]) setFocusId(matches[0]) }} className="flex gap-2">
+          <form onSubmit={(e) => { e.preventDefault(); if (matches[0]) setFocusId((f) => ({ id: matches[0], n: (f?.n ?? 0) + 1 })) }} className="flex gap-2">
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="별 찾기 (글 제목)" aria-label="별 찾기"
               className="w-44 rounded-md border border-gray-300 px-3 py-1.5 text-sm sm:w-56" />
             <button type="submit" className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm text-white">찾기</button>
@@ -61,10 +63,10 @@ export default function GlobalUniversePage() {
         </div>
       ) : (
         <>
-          <UniverseCanvas graph={data} highlightIds={matches} focusId={focusId} visibleUntil={until}
+          <UniverseCanvas graph={data} highlightIds={matches} focusId={focusId} ref={canvasRef}
             onSelect={(node) => navigate(`/@${node.username}/posts/${node.id}`)}
             colorOf={(node) => colorByUser.get(node.username)} groupOf={(node) => node.username} />
-          <Timelapse times={data.nodes.map((n) => Number(new Date(n.writtenAt)))} onChange={setUntil} />
+          <Timelapse times={times} onChange={(until) => canvasRef.current?.setUntil(until)} />
         </>
       )}
 

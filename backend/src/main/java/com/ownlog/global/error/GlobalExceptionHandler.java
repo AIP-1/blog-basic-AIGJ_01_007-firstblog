@@ -91,14 +91,40 @@ public class GlobalExceptionHandler {
     /** DB 제약 위반. 알려진 UNIQUE 제약이면 409, 그 밖에는 코드 버그일 가능성이 커서 500이에요. */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException e) {
-        String constraint = e.getCause() instanceof ConstraintViolationException cve
-                ? cve.getConstraintName() : null;
+        ConstraintViolationException cve = e.getCause() instanceof ConstraintViolationException c ? c : null;
+        String constraint = cve == null ? null : cve.getConstraintName();
         ErrorCode errorCode = constraint == null ? null : CONSTRAINT_ERRORS.get(constraint);
+        if (errorCode == null && constraint != null && !isDeleteSide(cve)) {
+            errorCode = foreignKeyError(constraint);
+        }
         if (errorCode == null) {
             log.error("예상하지 못한 DB 제약 위반: {}", constraint, e);
             return toResponse(ErrorCode.INTERNAL_ERROR, List.of());
         }
         return toResponse(errorCode, List.of());
+    }
+
+    /**
+     * 외래키 위반(이름이 "_fkey"로 끝나요): 글·댓글·카테고리를 지우는 동안 같은 대상에 좋아요·댓글·링크 등이 동시에 들어온 경우예요.
+     * 대상이 방금 사라진 거라 500이 아니라 404로 알려줘요.
+     */
+    /** 지우는 쪽이 막힌 경우(아직 참조하는 행이 있음)는 대상이 사라진 게 아니라서 404로 바꾸지 않아요 (다시 시도하면 돼요) */
+    private static boolean isDeleteSide(ConstraintViolationException cve) {
+        String message = cve.getSQLException() == null ? null : cve.getSQLException().getMessage();
+        return message != null && message.contains("still referenced");
+    }
+
+    private static ErrorCode foreignKeyError(String constraint) {
+        if (!constraint.endsWith("_fkey")) {
+            return null;
+        }
+        if (constraint.contains("comment_id") || constraint.contains("parent_id")) {
+            return ErrorCode.COMMENT_NOT_FOUND;
+        }
+        if (constraint.contains("category_id")) {
+            return ErrorCode.CATEGORY_NOT_FOUND;
+        }
+        return constraint.contains("post_id") ? ErrorCode.POST_NOT_FOUND : null;
     }
 
     /** Spring Security 권한 거부가 컨트롤러까지 올라온 경우 (아래 Exception 처리에 먹혀서 500이 되지 않게) */

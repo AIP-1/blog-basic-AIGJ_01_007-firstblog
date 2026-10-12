@@ -1,6 +1,6 @@
 # 화면 점검 (E2E)
 
-헤드리스 Chrome으로 실제 화면을 눌러 보며 기능을 확인해요. **105개 항목**, 한 번 도는 데 약 7분 걸려요.
+헤드리스 Chrome으로 실제 화면을 눌러 보며 기능을 확인해요. **113개 항목**, 한 번 도는 데 약 8분 걸려요.
 Playwright 같은 추가 설치 없이 Chrome DevTools Protocol(`cdp.mjs`)로 동작해요. Node.js 24, Chrome이 필요해요.
 
 | 파일 | 확인하는 것 |
@@ -16,6 +16,7 @@ Playwright 같은 추가 설치 없이 Chrome DevTools Protocol(`cdp.mjs`)로 �
 | `check-activity` | 🌱 기록 잔디, 그날의 기록 |
 | `check-expired` | 만료·잘못된 토큰으로 접속해도 공개 화면에서 튕기지 않음 |
 | `check-extra` | 🎞️ 타임랩스, 🌌 서비스 전체 우주, 🔍 링크 미리보기, 💌 받는 사람 캡슐 |
+| `check-audit` | 전체 점검에서 고친 문제: 인코딩 주소 인증 우회, 외부 주소 리다이렉트, 글쓰기 화면 상태, 임시저장 덮어쓰기, 댓글 두 번 등록 |
 
 ## 발표 리허설
 

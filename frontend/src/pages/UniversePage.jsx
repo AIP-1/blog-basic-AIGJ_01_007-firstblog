@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { getBlogHome, getGraph } from '../api/blogs'
 import { getTopics } from '../api/posts'
@@ -20,8 +20,9 @@ export default function UniversePage() {
   const topics = useAsync(() => getTopics(), 'topics')
   const [query, setQuery] = useState('')
   const [focusId, setFocusId] = useState(null)
-  const [until, setUntil] = useState(null) // 타임랩스 (GR-05)
+  const canvasRef = useRef(null) // 타임랩스는 캔버스에 직접 알려줘요 (GR-05)
 
+  const times = useMemo(() => (graph.data?.nodes ?? []).map((n) => Number(new Date(n.writtenAt))), [graph.data])
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase()
     return q && graph.data ? graph.data.nodes.filter((n) => n.title.toLowerCase().includes(q)).map((n) => n.id) : []
@@ -30,7 +31,7 @@ export default function UniversePage() {
   if (!username) return <NotFoundPage />
   if (home.status === 404 || graph.status === 404) return <NotFoundPage message="존재하지 않는 블로그예요" />
   if (home.loading || graph.loading) return <p className="py-16 text-center text-gray-500">우주를 불러오는 중…</p>
-  if (graph.error) return <p className="py-16 text-center text-red-600">{graph.error}</p>
+  if (graph.error || home.error) return <p className="py-16 text-center text-red-600">{graph.error ?? home.error}</p>
 
   const { nodes, edges, truncated } = graph.data
   const linkCount = edges.filter((e) => e.type === 'LINK').length
@@ -49,7 +50,7 @@ export default function UniversePage() {
           </p>
         </div>
         {nodes.length > 1 && (
-          <form onSubmit={(e) => { e.preventDefault(); if (matches[0]) setFocusId(matches[0]) }} className="flex gap-2">
+          <form onSubmit={(e) => { e.preventDefault(); if (matches[0]) setFocusId((f) => ({ id: matches[0], n: (f?.n ?? 0) + 1 })) }} className="flex gap-2">
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="별 찾기 (글 제목)" aria-label="별 찾기"
               className="w-44 rounded-md border border-gray-300 px-3 py-1.5 text-sm sm:w-56" />
             <button type="submit" className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm text-white">찾기</button>
@@ -65,8 +66,8 @@ export default function UniversePage() {
         </div>
       ) : (
         <>
-          <UniverseCanvas graph={graph.data} onSelect={open} highlightIds={matches} focusId={focusId} visibleUntil={until} />
-          <Timelapse times={nodes.map((n) => Number(new Date(n.writtenAt)))} onChange={setUntil} />
+          <UniverseCanvas graph={graph.data} onSelect={open} highlightIds={matches} focusId={focusId} ref={canvasRef} />
+          <Timelapse times={times} onChange={(until) => canvasRef.current?.setUntil(until)} />
         </>
       )}
 

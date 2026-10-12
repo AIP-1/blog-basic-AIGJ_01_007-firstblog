@@ -35,6 +35,13 @@ public record PostDetailResponse(
     }
 
     public record CategoryInfo(Long id, String name, Visibility visibility) {
+
+        /** 주인이 아닌데(받는 사람 캡슐) 비공개 카테고리면 이름과 id를 숨겨요 */
+        static CategoryInfo of(Category category, boolean isOwner) {
+            return !isOwner && category.isPrivate()
+                    ? new CategoryInfo(null, "비공개 카테고리", Visibility.PRIVATE)
+                    : new CategoryInfo(category.getId(), category.getName(), category.getVisibility());
+        }
     }
 
     public record BlogInfo(Long id, String name) {
@@ -46,7 +53,7 @@ public record PostDetailResponse(
         Blog blog = post.getBlog();
         return new PostDetailResponse(
                 post.getId(), post.getTitle(), post.getContent(), post.getThumbnailUrl(), post.getVisibility(),
-                new CategoryInfo(category.getId(), category.getName(), category.getVisibility()),
+                CategoryInfo.of(category, isOwner),
                 post.getTopic() == null ? null : TopicItem.from(post.getTopic()),
                 post.getTags().stream()
                         .map(Tag::getName)
@@ -69,7 +76,7 @@ public record PostDetailResponse(
         Blog blog = post.getBlog();
         return new PostDetailResponse(
                 post.getId(), post.getTitle(), null, null, post.getVisibility(),
-                new CategoryInfo(category.getId(), category.getName(), category.getVisibility()),
+                CategoryInfo.of(category, false),
                 null, List.of(),
                 UserSummary.from(blog.getUser()),
                 new BlogInfo(blog.getId(), blog.getName()),

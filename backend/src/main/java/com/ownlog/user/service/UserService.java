@@ -4,6 +4,7 @@ import com.ownlog.blog.service.BlogService;
 import com.ownlog.global.error.BusinessException;
 import com.ownlog.global.error.ErrorCode;
 import com.ownlog.global.storage.ImageDeleteEvent;
+import com.ownlog.global.storage.ImageReferenceChecker;
 import com.ownlog.user.domain.User;
 import com.ownlog.user.dto.MeResponse;
 import com.ownlog.user.dto.PasswordChangeRequest;
@@ -26,6 +27,7 @@ public class UserService {
     private final BlogService blogService;
     private final PasswordEncoder passwordEncoder;
     private final WithdrawalCleaner withdrawalCleaner;
+    private final ImageReferenceChecker imageReferenceChecker;
     private final ApplicationEventPublisher eventPublisher;
 
     /** API 4.4 내 정보 */
@@ -43,7 +45,7 @@ public class UserService {
         user.updateProfile(request.nickname().strip(), request.normalizedBio(), request.profileImageUrl());
 
         if (oldImage != null && !oldImage.equals(request.profileImageUrl())) {
-            eventPublisher.publishEvent(new ImageDeleteEvent(oldImage));
+            deleteImageIfUnused(oldImage, userId);
         }
         return MeResponse.of(user, blogService.getMyBlog(userId));
     }
@@ -79,7 +81,14 @@ public class UserService {
         user.withdraw(passwordEncoder.encode(UUID.randomUUID().toString()));   // ④ 개인정보 익명화 + DELETED
 
         if (oldImage != null) {
-            eventPublisher.publishEvent(new ImageDeleteEvent(oldImage));       // ⑤ 커밋 후 프로필 사진 삭제
+            deleteImageIfUnused(oldImage, userId);                            // ⑤ 커밋 후 프로필 사진 삭제
+        }
+    }
+
+    /** 다른 회원이나 글이 같은 파일을 쓰고 있으면 지우지 않아요 (남의 파일 주소를 프로필로 넣었다가 바꾸는 경우) */
+    private void deleteImageIfUnused(String url, Long userId) {
+        if (!imageReferenceChecker.isUsedElsewhere(url, userId)) {
+            eventPublisher.publishEvent(new ImageDeleteEvent(url));
         }
     }
 

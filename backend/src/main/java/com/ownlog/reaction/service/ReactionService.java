@@ -2,6 +2,8 @@ package com.ownlog.reaction.service;
 
 import com.ownlog.global.common.PageCondition;
 import com.ownlog.global.common.PageResponse;
+import com.ownlog.global.error.BusinessException;
+import com.ownlog.global.error.ErrorCode;
 import com.ownlog.global.security.LoginUser;
 import com.ownlog.post.repository.PostRepository;
 import com.ownlog.post.service.PostQueryService;
@@ -38,10 +40,10 @@ public class ReactionService {
         return new LikeResponse(true, postRepository.findLikeCount(postId));
     }
 
-    /** API 9.1 좋아요 취소 */
+    /** API 9.1 좋아요 취소. 누른 뒤 글이 비공개가 됐어도 내 좋아요는 취소할 수 있어요 */
     @Transactional
     public LikeResponse unlike(Long postId, LoginUser me) {
-        postQueryService.getViewablePost(postId, me);
+        getPublishedPost(postId);
         if (postLikeRepository.deleteIfPresent(me.id(), postId) == 1) {  // 실제로 취소했을 때만
             postRepository.decreaseLikeCount(postId);
         }
@@ -56,12 +58,19 @@ public class ReactionService {
         return new BookmarkResponse(true);
     }
 
-    /** API 9.2 북마크 해제 */
+    /** API 9.2 북마크 해제. 글이 비공개가 됐어도 내 북마크는 지울 수 있어요 */
     @Transactional
     public BookmarkResponse unbookmark(Long postId, LoginUser me) {
-        postQueryService.getViewablePost(postId, me);
+        getPublishedPost(postId);
         bookmarkRepository.deleteIfPresent(me.id(), postId);
         return new BookmarkResponse(false);
+    }
+
+    /** 취소용: 발행된 글이면 돼요 (내 좋아요·북마크 행만 지우니 볼 수 있는지는 따지지 않아요) */
+    private void getPublishedPost(Long postId) {
+        postRepository.findById(postId)
+                .filter(post -> post.isPublished())
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
     }
 
     /** API 4.8 내 북마크 목록: 북마크한 최신순, 지금 볼 수 없는 글은 빼요 (K-02) */

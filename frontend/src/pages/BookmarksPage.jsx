@@ -7,7 +7,7 @@ import { useAsync } from '../hooks/useAsync'
 /** 내 북마크 (K-02): 북마크한 최신순, 지금 볼 수 없게 된 글은 빠져요 */
 export default function BookmarksPage() {
   const [searchParams] = useSearchParams()
-  const page = Number(searchParams.get('page')) || 1
+  const page = Math.max(1, Math.floor(Number(searchParams.get('page'))) || 1)
   const { data, error, loading } = useAsync(() => getMyBookmarks(page), String(page))
 
   return (

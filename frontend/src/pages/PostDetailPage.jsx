@@ -27,7 +27,7 @@ export default function PostDetailPage() {
   const navigate = useNavigate()
   const requireLogin = useRequireLogin()
   const [reporting, setReporting] = useState(false)
-  const now = useNow(30_000)
+  const now = useNow(30_000, Boolean(post?.timeCapsule))   // 타임캡슐 글에서만 시계를 돌려요
 
   if (!username) return <NotFoundPage />
   if (status === 404) return <NotFoundPage message="존재하지 않는 글이에요" />
@@ -36,9 +36,10 @@ export default function PostDetailPage() {
 
   const toggleLike = async () => {
     if (!requireLogin()) return
+    const postId = post.id
     try {
       const { liked, likeCount } = await setLike(post.id, !post.liked)
-      setData((p) => ({ ...p, liked, likeCount }))
+      setData((p) => (p?.id === postId ? { ...p, liked, likeCount } : p))   // 응답이 늦게 와서 다른 글로 넘어갔으면 무시
     } catch (err) {
       window.alert(errorMessage(err))
     }
@@ -46,9 +47,10 @@ export default function PostDetailPage() {
 
   const toggleBookmark = async () => {
     if (!requireLogin()) return
+    const postId = post.id
     try {
       const { bookmarked } = await setBookmark(post.id, !post.bookmarked)
-      setData((p) => ({ ...p, bookmarked }))
+      setData((p) => (p?.id === postId ? { ...p, bookmarked } : p))
     } catch (err) {
       window.alert(errorMessage(err))
     }
@@ -79,7 +81,7 @@ export default function PostDetailPage() {
             {post.recipient ? `님이 ${post.recipient.nickname}님에게 보낸 기록이에요. 열리면 나만 볼 수 있어요.` : '의 기록'}
           </p>
         </header>
-        <SealedCapsule capsule={capsule} onOpen={() => setReloadCount((n) => n + 1)} />
+        <SealedCapsule capsule={capsule} attempt={reloadCount} onOpen={() => setReloadCount((n) => n + 1)} />
       </article>
     )
   }

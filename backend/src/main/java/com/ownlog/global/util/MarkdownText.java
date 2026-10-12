@@ -23,7 +23,9 @@ public final class MarkdownText {
             return null;
         }
         String url = matcher.group(1);
-        return url.length() <= MAX_URL_LENGTH ? url : null;
+        // 직접 지정한 썸네일(PostRequest)과 같은 규칙: 우리 업로드나 https만 (http·다른 스킴은 썸네일로 쓰지 않아요)
+        boolean allowed = url.startsWith("/uploads/") || url.startsWith("https://");
+        return allowed && url.length() <= MAX_URL_LENGTH ? url : null;
     }
 
     /** 마크다운 문법을 걷어 내고 앞 150자. 넘으면 "…"를 붙여요 */
@@ -33,6 +35,7 @@ public final class MarkdownText {
         }
         String text = markdown
                 .replaceAll("(?s)```.*?```", " ")                             // 코드 블록
+                .replaceAll("(?s)~~~.*?~~~", " ")                             // 코드 블록 (물결)
                 .replaceAll("`([^`]*)`", "$1")                                // 인라인 코드 → 글자만
                 .replaceAll("\\[\\[\\d{1,18}\\|([^\\]\\n]{1,100})]]", "$1")      // [[번호|글자]] 글 연결 → 글자만 (LK-02)
                 .replaceAll("!\\[[^\\]]*]\\([^)]*\\)", " ")                   // 이미지 제거

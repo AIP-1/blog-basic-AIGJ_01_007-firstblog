@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { errorMessage, fieldErrorsOf } from '../api/client'
 import { report } from '../api/comments'
 
@@ -16,13 +16,21 @@ export default function ReportDialog({ target, onClose }) {
   const [message, setMessage] = useState('')
   const [done, setDone] = useState(false)
 
+  const [sending, setSending] = useState(false)
+  const sendingRef = useRef(false) // 같은 순간 두 번 눌러도 막으려고 바로 바뀌는 ref로 확인해요
   const submit = async (e) => {
     e.preventDefault()
+    if (sendingRef.current) return
+    sendingRef.current = true   // 두 번 눌러도 한 번만 신고해요
+    setSending(true)
     try {
       await report(target, reason, detail.trim())
       setDone(true)
     } catch (err) {
       setMessage(fieldErrorsOf(err).detail ?? errorMessage(err))
+    } finally {
+      sendingRef.current = false
+      setSending(false)
     }
   }
 
@@ -58,7 +66,7 @@ export default function ReportDialog({ target, onClose }) {
               <button type="button" onClick={onClose} className="flex-1 rounded-md border border-gray-300 py-2">
                 취소
               </button>
-              <button type="submit" className="flex-1 rounded-md bg-red-600 py-2 text-white">
+              <button type="submit" disabled={sending} className="flex-1 rounded-md bg-red-600 py-2 text-white disabled:opacity-50">
                 신고
               </button>
             </div>

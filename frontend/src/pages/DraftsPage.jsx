@@ -9,7 +9,7 @@ import { formatDate, formatTime } from '../utils/format'
 /** 임시저장 목록 (D-04): 최근 저장 순, 이어 쓰기·삭제 */
 export default function DraftsPage() {
   const [searchParams] = useSearchParams()
-  const page = Number(searchParams.get('page')) || 1
+  const page = Math.max(1, Math.floor(Number(searchParams.get('page'))) || 1)
   const [version, setVersion] = useState(0)
   const { data, error, loading } = useAsync(() => getDrafts(page), `${page}|${version}`)
 

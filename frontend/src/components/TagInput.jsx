@@ -20,6 +20,8 @@ export default function TagInput({ tags, onChange }) {
   }
 
   const keyDown = (e) => {
+    // 한글 입력 중(조합 중) Enter는 글자 확정용이라 무시해요. 안 그러면 "여행"이 "여행" + "행"으로 두 번 들어가요
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault() // Enter가 폼 제출이 되지 않게
       add()

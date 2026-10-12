@@ -37,7 +37,7 @@ try {
     await page.clickButton('▶ 타임랩스')
     await sleep(3000)
     await shot('0-timelapse')
-    await page.waitFor(`document.querySelector('[aria-live=polite]').innerText.startsWith('오늘')`, 12000)
+    await page.waitFor(`document.querySelector('[data-timelapse-status]').innerText.startsWith('오늘')`, 12000)
     return '끝까지 재생됨'
   })
   await step('1. 코드파도의 기록 우주 → 별 찾기 "회고"', async () => {

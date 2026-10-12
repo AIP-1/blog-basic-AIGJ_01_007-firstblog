@@ -47,6 +47,7 @@ export default function WritePage() {
   const [linkQuery, setLinkQuery] = useState(null) // [[ 자동완성: { start, end, q }
   const [linkActive, setLinkActive] = useState(0)
   const linkItems = useRef([])
+  const savedIdRef = useRef(null) // 방금 처음 임시저장해서 주소만 바뀐 글: 다시 불러와 입력 중인 내용을 덮어쓰지 않아요
   const onLinkItems = useCallback((list) => {
     linkItems.current = list
     setLinkActive(0)
@@ -62,13 +63,15 @@ export default function WritePage() {
 
   // /write/:postId → 임시저장 글인지 먼저 보고, 아니면 내 발행 글로 불러와요
   useEffect(() => {
-    if (!postId) return
+    if (!postId || savedIdRef.current === postId) return
+    let ignore = false // 늦게 도착한 응답은 버려요
     const toForm = (p) => ({
       title: p.title ?? '', content: p.content ?? '', thumbnailUrl: p.thumbnailUrl, categoryId: p.category.id,
       topicId: p.topic?.id ?? null, tags: p.tags, visibility: p.visibility,
     })
     getDraft(postId)
       .then((d) => {
+        if (ignore) return
         setForm(toForm(d))
         setDraftId(d.id)
         setSavedAt(d.updatedAt)
@@ -77,6 +80,7 @@ export default function WritePage() {
       .catch(() =>
         getPostDetail(user.username, postId)
           .then((p) => {
+            if (ignore) return
             if (!p.isOwner) throw new Error()
             setForm(toForm(p))
             // 봉인 중인 타임캡슐은 열릴 때까지 수정할 수 없어요 (TC-04)
@@ -84,8 +88,11 @@ export default function WritePage() {
             if (sealed) setCapsule({ enabled: true, openAt: p.timeCapsule.openAt })
             setMode(sealed ? 'sealed' : 'published')
           })
-          .catch(() => setMode('notfound')),
+          .catch(() => !ignore && setMode('notfound')),
       )
+    return () => {
+      ignore = true
+    }
   }, [postId, user.username])
 
   // 저장하지 않은 내용이 있으면 새로고침·창 닫기 전에 경고해요 (D-07)
@@ -131,7 +138,8 @@ export default function WritePage() {
       if (!draftId) {
         setDraftId(saved.id)
         setMode('draft')
-        navigate(`/write/${saved.id}`, { replace: true })
+        savedIdRef.current = String(saved.id)
+        navigate(`/write/${saved.id}`, { replace: true, state: { writeKey: 'new' } })
       }
       setSavedAt(saved.updatedAt)
       setDirty(false)
@@ -163,7 +171,7 @@ export default function WritePage() {
     const inserted = `[[${post.id}|${label}]]`
     const { start, end } = linkQuery
     update({ content: form.content.slice(0, start) + inserted + form.content.slice(end) })
-    setLinkQuery(null)
+    closeLinkQuery()
     requestAnimationFrame(() => {
       const textarea = document.querySelector('textarea[aria-label="본문"]')
       textarea?.focus()
@@ -171,12 +179,19 @@ export default function WritePage() {
     })
   }
 
+  /** 자동완성 상태를 바꿀 때마다 이전 검색 결과를 비워요 (Enter가 예전 결과를 넣지 않게) */
+  const openLinkQuery = (query) => {
+    if (query?.q !== linkQuery?.q) linkItems.current = []
+    setLinkQuery(query)
+  }
+  const closeLinkQuery = () => openLinkQuery(null)
+
   const onEditorKeyDown = (e) => {
-    if (!linkQuery) return
+    if (!linkQuery || e.nativeEvent.isComposing || e.keyCode === 229) return   // 한글 조합 중 Enter는 무시
     const count = linkItems.current.length
     if (e.key === 'Escape') {
       e.preventDefault()
-      setLinkQuery(null)
+      closeLinkQuery()
     } else if (count && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
       e.preventDefault()
       setLinkActive((i) => (i + (e.key === 'ArrowDown' ? 1 : count - 1)) % count)
@@ -191,7 +206,7 @@ export default function WritePage() {
     const textarea = document.querySelector('textarea[aria-label="본문"]')
     const pos = textarea ? textarea.selectionStart : form.content.length
     update({ content: `${form.content.slice(0, pos)}[[${form.content.slice(pos)}` })
-    setLinkQuery({ start: pos, end: pos + 2, q: '' })
+    openLinkQuery({ start: pos, end: pos + 2, q: '' })
     requestAnimationFrame(() => {
       textarea?.focus()
       textarea?.setSelectionRange(pos + 2, pos + 2)
@@ -284,9 +299,21 @@ export default function WritePage() {
         )}
         <span className="text-xs text-gray-400">jpg·png·gif·webp, 5MB 이하 · 썸네일이 없으면 본문 첫 이미지를 써요</span>
         <input ref={imageInput} type="file" aria-label="본문 이미지 파일" accept="image/jpeg,image/png,image/gif,image/webp" hidden
-          onChange={(e) => upload(e.target.files[0], (url) => update({ content: `${form.content}\n\n![](${url})\n` }))} />
+          onChange={(e) => {
+            const file = e.target.files[0]
+            e.target.value = '' // 같은 파일을 다시 골라도 올라가게
+            // 올라가는 동안 쓴 글자가 사라지지 않게 그때의 최신 본문 뒤에 붙여요
+            upload(file, (url) => {
+              setForm((f) => ({ ...f, content: `${f.content}\n\n![](${url})\n` }))
+              setDirty(true)
+            })
+          }} />
         <input ref={thumbnailInput} type="file" aria-label="썸네일 파일" accept="image/jpeg,image/png,image/gif,image/webp" hidden
-          onChange={(e) => upload(e.target.files[0], (url) => update({ thumbnailUrl: url }))} />
+          onChange={(e) => {
+            const file = e.target.files[0]
+            e.target.value = ''
+            upload(file, (url) => update({ thumbnailUrl: url }))
+          }} />
       </div>
 
       <div data-color-mode="light" className="relative">
@@ -294,7 +321,7 @@ export default function WritePage() {
           value={form.content}
           onChange={(value, event) => {
             update({ content: value ?? '' })
-            if (event?.target) setLinkQuery(findLinkQuery(event.target))
+            if (event?.target) openLinkQuery(findLinkQuery(event.target))
           }}
           height={480}
           previewOptions={{ rehypePlugins: [[rehypeSanitize]] }}
@@ -303,14 +330,14 @@ export default function WritePage() {
             'aria-label': '본문',
             maxLength: 100000,
             onKeyDown: onEditorKeyDown,
-            onBlur: () => setTimeout(() => setLinkQuery(null), 150),
+            onBlur: () => setTimeout(closeLinkQuery, 150),
           }}
         />
         {/* 입력하는 동안 보이도록 편집기 위에 띄워요 (넓은 화면은 오른쪽 미리보기 자리, 휴대폰은 위쪽) */}
         {linkQuery && (
           <div className="absolute inset-x-2 top-12 z-20 sm:left-auto sm:w-96">
             <LinkSuggestions query={linkQuery.q} active={linkActive} onItems={onLinkItems} onPick={pickLink}
-              onClose={() => setLinkQuery(null)} myUsername={user.username} />
+              onClose={closeLinkQuery} myUsername={user.username} />
           </div>
         )}
       </div>

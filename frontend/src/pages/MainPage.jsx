@@ -17,7 +17,7 @@ export default function MainPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') === 'popular' ? 'popular' : 'latest'
   const topic = searchParams.get('topic')
-  const page = Number(searchParams.get('page')) || 1
+  const page = Math.max(1, Math.floor(Number(searchParams.get('page'))) || 1)
   const key = `${tab}|${topic}|${page}`
 
   const [topics, setTopics] = useState([])

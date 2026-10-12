@@ -289,7 +289,7 @@
 | 필드 | 필수 | 규칙 |
 |---|---|---|
 | `email` | ✅ | 이메일 형식, 최대 255자. **소문자로 바꿔서 저장**해요 |
-| `password` | ✅ | 8~64자, 영문과 숫자 포함 |
+| `password` | ✅ | 8~64자, 영문과 숫자 포함, UTF-8 72바이트 이하 (넘으면 `fieldErrors`에 "비밀번호가 너무 길어요…") |
 | `passwordConfirm` | ✅ | `password`와 같아야 해요 |
 | `username` | ✅ | 영문 소문자, 숫자, `_` 3~20자. 예약어(`admin`, `ownlog`, `official`, `system` 등) 불가 |
 | `nickname` | ✅ | 2~20자 |

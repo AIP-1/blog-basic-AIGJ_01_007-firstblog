@@ -13,7 +13,7 @@ const authed = (u) => ({ headers: { Authorization: `Bearer ${tokens[u]}` } })
 
 const page = await launch({ port: 9348 })
 const asUser = async (u) => { await page.goto(`${BASE}/`); await page.eval(u ? `localStorage.setItem('ownlog.accessToken', ${JSON.stringify(tokens[u])})` : `localStorage.removeItem('ownlog.accessToken')`) }
-const starCount = () => page.eval(`Number(document.querySelector('[aria-live=polite]').innerText.match(/별 (\\d+)개/)[1])`)
+const starCount = () => page.eval(`Number(document.querySelector('[data-timelapse-status]').innerText.match(/별 (\\d+)개/)[1])`)
 try {
   // 1. 타임랩스
   await asUser(null)
@@ -26,7 +26,7 @@ try {
   await sleep(3500)
   const mid = await starCount()
   await page.screenshot(join(SHOTS, '80-timelapse-mid.png'))
-  await page.waitFor(`document.querySelector('[aria-live=polite]').innerText.startsWith('오늘')`, 9000)
+  await page.waitFor(`document.querySelector('[data-timelapse-status]').innerText.startsWith('오늘')`, 9000)
   const end = await starCount()
   check('1. 타임랩스 ▶ → 별이 0개 근처에서 점점 늘고, 끝나면 "오늘 · 전체"', early < mid && mid <= total && end === total && early < total,
     `처음 ${early} → 중간 ${mid} → 끝 ${end} / 전체 ${total}`)

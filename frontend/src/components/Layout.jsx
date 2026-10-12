@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Link, Outlet, useNavigate } from 'react-router'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../auth/useAuth'
+import ErrorBoundary from './ErrorBoundary'
 
 /**
  * 모든 화면의 공통 틀: 상단 헤더 + 본문 (반응형).
@@ -9,6 +10,7 @@ import { useAuth } from '../auth/useAuth'
 export default function Layout() {
   const { user, loading, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [keyword, setKeyword] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -109,7 +111,10 @@ export default function Layout() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6">
-        <Outlet />
+        {/* 주소가 바뀌면 오류 화면도 초기화돼요 */}
+        <ErrorBoundary key={location.pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   )

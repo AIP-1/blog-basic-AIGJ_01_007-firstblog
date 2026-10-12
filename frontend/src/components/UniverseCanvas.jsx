@@ -1,5 +1,5 @@
 import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY } from 'd3-force'
-import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useImperativeHandle, useRef, useState } from 'react'
 import { NO_TOPIC_COLOR, TOPIC_COLORS } from '../utils/topicColors'
 const LOCKED = '#8b5cf6'
 
@@ -9,10 +9,12 @@ const radiusOf = (n) => (n.locked ? 5 : Math.min(18, 4 + Math.sqrt((n.linkCount 
  * 기록 그래프 캔버스 (GR-02 ~ GR-07): d3-force가 자리를 계산하고 Canvas에 직접 그려요.
  * 끌기(빈 곳: 화면 이동, 별: 별 이동), 휠·두 손가락으로 확대, 별을 누르면 onSelect(node).
  * focusId가 바뀌면 그 별로 화면을 옮겨요. highlightIds는 검색 결과 강조예요.
- * visibleUntil(ms)이 있으면 그 시각까지 쓴 별만 그려요 (타임랩스, GR-05). 새로 보이는 별은 태어나는 효과가 있어요.
+ * ref.setUntil(ms)로 그 시각까지 쓴 별만 그려요 (타임랩스, GR-05, null이면 전체). 새로 보이는 별은 태어나는 효과가 있어요.
+ * 타임랩스는 1초에 60번 바뀌어서, 화면(React) 상태 대신 캔버스에 직접 알려줘서 페이지 전체가 다시 그려지지 않게 해요.
+ * focusId는 { id, n } 형태라서 같은 별을 다시 찾아도(n이 바뀌면) 다시 이동해요.
  * colorOf(node)를 주면 별 색을 바꿔요 (서비스 전체 우주는 블로그별 색). groupOf(node)를 주면 같은 그룹끼리 모여요 (은하).
  */
-export default function UniverseCanvas({ graph, onSelect, highlightIds, focusId, visibleUntil = null, colorOf, groupOf }) {
+export default function UniverseCanvas({ ref, graph, onSelect, highlightIds, focusId, colorOf, groupOf }) {
   const wrapRef = useRef(null)
   const canvasRef = useRef(null)
   const stateRef = useRef(null) // 매 프레임 쓰는 값 (렌더링과 무관해서 ref에 둬요)
@@ -174,6 +176,12 @@ export default function UniverseCanvas({ graph, onSelect, highlightIds, focusId,
     canvas.addEventListener('pointerup', onUp)
     canvas.addEventListener('pointercancel', onUp)
     canvas.addEventListener('wheel', onWheel, { passive: false })
+    // 별 위에서 캔버스 밖으로 나가면 설명 상자를 닫아요
+    const onLeave = () => {
+      s.hovered = null
+      setHover(null)
+    }
+    canvas.addEventListener('pointerleave', onLeave)
 
     // 자동 맞춤: 사용자가 움직이기 전까지 모든 별이 화면에 들어오게 부드럽게 확대·이동해요
     const fitView = () => {
@@ -305,14 +313,17 @@ export default function UniverseCanvas({ graph, onSelect, highlightIds, focusId,
       canvas.removeEventListener('pointermove', onMove)
       canvas.removeEventListener('pointerup', onUp)
       canvas.removeEventListener('pointercancel', onUp)
+      canvas.removeEventListener('pointerleave', onLeave)
       canvas.removeEventListener('wheel', onWheel)
     }
   }, [graph])
 
   // 타임랩스: 이 시각까지 쓴 별만 (null이면 모두)
-  useEffect(() => {
-    if (stateRef.current) stateRef.current.until = visibleUntil
-  }, [visibleUntil])
+  useImperativeHandle(ref, () => ({
+    setUntil(until) {
+      if (stateRef.current) stateRef.current.until = until
+    },
+  }), [])
 
   // 검색 강조
   useEffect(() => {
@@ -322,7 +333,7 @@ export default function UniverseCanvas({ graph, onSelect, highlightIds, focusId,
   // 검색에서 고른 별로 화면 옮기기 (조금 확대)
   useEffect(() => {
     const s = stateRef.current
-    const node = s?.byId.get(focusId)
+    const node = s?.byId.get(focusId?.id)
     if (!node) return
     s.userMoved = true
     s.view.k = Math.max(s.view.k, 1.4)

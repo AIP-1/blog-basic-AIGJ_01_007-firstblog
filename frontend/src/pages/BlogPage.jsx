@@ -16,7 +16,7 @@ export default function BlogPage() {
   const [searchParams] = useSearchParams()
   const categoryId = searchParams.get('category')
   const date = /^\d{4}-\d{2}-\d{2}$/.test(searchParams.get('date') ?? '') ? searchParams.get('date') : null // AC-03
-  const page = Number(searchParams.get('page')) || 1
+  const page = Math.max(1, Math.floor(Number(searchParams.get('page'))) || 1)
   const viewer = user?.id // 주인에게는 비공개 글·카테고리까지 보여서 로그인 상태가 바뀌면 다시 불러와요
 
   const home = useAsync(() => getBlogHome(username), `${username}|${viewer}`)

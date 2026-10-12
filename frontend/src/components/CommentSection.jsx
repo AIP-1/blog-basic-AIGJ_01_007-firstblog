@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { errorMessage } from '../api/client'
 import { createComment, deleteComment, getComments, updateComment } from '../api/comments'
@@ -131,6 +131,8 @@ function CommentItem({ comment, postId, onChange, onReport, canReply = false }) 
 }
 
 function CommentForm({ postId, parentId, initial = '', submitLabel = '댓글 등록', onSubmit, onDone, onCancel }) {
+  const [sending, setSending] = useState(false)
+  const sendingRef = useRef(false) // 같은 순간 두 번 눌러도 막으려고 바로 바뀌는 ref로 확인해요 (state는 다음 렌더링에 바뀌어요)
   const { user } = useAuth()
   const [content, setContent] = useState(initial)
   const [error, setError] = useState('')
@@ -149,7 +151,9 @@ function CommentForm({ postId, parentId, initial = '', submitLabel = '댓글 등
 
   const submit = async (e) => {
     e.preventDefault()
-    if (!content.trim()) return
+    if (!content.trim() || sendingRef.current) return
+    sendingRef.current = true   // 두 번 눌러도 댓글이 두 개 생기지 않게
+    setSending(true)
     try {
       await (onSubmit ? onSubmit(content) : createComment(postId, content, parentId))
       setContent('')
@@ -157,6 +161,9 @@ function CommentForm({ postId, parentId, initial = '', submitLabel = '댓글 등
       onDone()
     } catch (err) {
       setError(errorMessage(err))
+    } finally {
+      sendingRef.current = false
+      setSending(false)
     }
   }
 
@@ -177,7 +184,7 @@ function CommentForm({ postId, parentId, initial = '', submitLabel = '댓글 등
             취소
           </button>
         )}
-        <button type="submit" disabled={!content.trim()} className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">
+        <button type="submit" disabled={!content.trim() || sending} className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">
           {submitLabel}
         </button>
       </div>
