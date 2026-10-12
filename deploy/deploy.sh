@@ -28,6 +28,29 @@ export JWT_SECRET
 echo "▶ 이미지 불러오기: ${APP_NAME}:${IMAGE_TAG}"
 gunzip -c "$DEPLOY_DIR/ownlog.tar.gz" | docker load
 
+echo "▶ DB 연결 확인 (값은 GitHub이 ***로 가려요)"
+if ! [[ "$DB_PORT" =~ ^[0-9]+$ ]]; then
+  echo "❌ DB_PORT가 숫자만으로 되어 있지 않아요. 공백·줄바꿈이 들어갔는지 확인해 주세요."
+  exit 1
+fi
+if [[ "$DB_ADDRESS" =~ [[:space:]/:] ]]; then
+  echo "❌ DB_ADDRESS에 공백, http://, :포트 같은 게 섞여 있어요. 주소만 넣어 주세요."
+  exit 1
+fi
+echo "  DB 주소의 IP: $(getent hosts "$DB_ADDRESS" | awk '{print $1}' | head -1)"
+tcp_check='timeout 5 bash -c "</dev/tcp/$DB_ADDRESS/$DB_PORT" 2>/dev/null && echo OK || echo FAIL'
+host_result=$(bash -c "$tcp_check")
+container_result=$(docker run --rm -e DB_ADDRESS -e DB_PORT --entrypoint bash "${APP_NAME}:${IMAGE_TAG}" -c "$tcp_check")
+echo "  서버 → DB: $host_result / 컨테이너 → DB: $container_result"
+if [ "$container_result" != OK ]; then
+  if [ "$host_result" = OK ]; then
+    echo "❌ 서버에서는 DB에 닿는데 Docker 컨테이너 안에서는 안 닿아요 (Docker 네트워크 문제)."
+  else
+    echo "❌ 이 서버에서 DB_ADDRESS:DB_PORT로 연결이 안 돼요. 서버(학교 안)에서 쓰는 DB 주소·포트인지 확인해 주세요."
+  fi
+  exit 1
+fi
+
 echo "▶ 기존 컨테이너 정리"
 docker rm -f "$APP_NAME" 2>/dev/null || true
 
@@ -55,6 +78,8 @@ for i in $(seq 1 45); do
   sleep 2
 done
 
-echo "❌ 90초 안에 서버가 뜨지 않았어요. 최근 로그:"
-docker logs --tail 80 "$APP_NAME"
+echo "❌ 90초 안에 서버가 뜨지 않았어요. 원인(Caused by):"
+docker logs "$APP_NAME" 2>&1 | grep -E "Caused by|ERROR|APPLICATION FAILED" | head -20 || true
+echo "--- 마지막 로그 ---"
+docker logs --tail 30 "$APP_NAME" 2>&1
 exit 1
