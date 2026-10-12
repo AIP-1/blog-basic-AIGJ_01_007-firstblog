@@ -5,6 +5,9 @@ name: Deploy
 on:
   push:
     branches: [main]
+    paths-ignore:      # 문서만 바뀌면 배포하지 않아요
+      - "**.md"
+      - "docs/**"
   workflow_dispatch:   # Actions 화면에서 직접 실행할 수도 있어요
 
 env:
