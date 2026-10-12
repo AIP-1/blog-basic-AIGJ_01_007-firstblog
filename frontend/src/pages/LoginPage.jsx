@@ -30,8 +30,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto max-w-sm rounded-lg border border-gray-200 bg-white p-6">
-      <h1 className="mb-6 text-xl font-bold">로그인</h1>
+    <div className="mx-auto max-w-sm overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className="bg-cosmos px-6 py-6 text-white">
+        <p className="text-xs tracking-widest text-indigo-200">✦ OWNLOG</p>
+        <h1 className="mt-1 text-xl font-bold">로그인</h1>
+        <p className="mt-1 text-sm text-indigo-100/80">다시 만나서 반가워요. 오늘의 기록을 이어 가요.</p>
+      </div>
+      <div className="p-6">
       <form onSubmit={submit} className="space-y-4">
         <FormField label="이메일" name="email" type="email" value={form.email} onChange={change} required autoComplete="email" />
         <FormField label="비밀번호" name="password" type="password" value={form.password} onChange={change} required autoComplete="current-password" />
@@ -50,6 +55,7 @@ export default function LoginPage() {
           회원가입
         </Link>
       </p>
+      </div>
     </div>
   )
 }

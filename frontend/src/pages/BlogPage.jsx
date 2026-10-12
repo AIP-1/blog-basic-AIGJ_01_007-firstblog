@@ -36,36 +36,42 @@ export default function BlogPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 rounded-lg border border-gray-200 bg-white p-5 sm:flex-row sm:items-center">
-        {blog.owner.profileImageUrl ? (
-          <img src={blog.owner.profileImageUrl} alt="" className="h-16 w-16 rounded-full object-cover" />
-        ) : (
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100 text-xl font-bold text-indigo-600">
-            {blog.owner.nickname.slice(0, 1)}
+      <header className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        {/* 우주색 표지: 블로그마다 하나의 작은 우주예요 */}
+        <div className="bg-cosmos h-20 sm:h-24" aria-hidden="true" />
+        <div className="flex flex-col gap-4 px-5 pb-5 sm:flex-row sm:items-end">
+          {blog.owner.profileImageUrl ? (
+            <img src={blog.owner.profileImageUrl} alt="" className="-mt-10 h-20 w-20 rounded-full object-cover ring-4 ring-white" />
+          ) : (
+            <div className="-mt-10 flex h-20 w-20 items-center justify-center rounded-full bg-indigo-100 text-2xl font-bold text-indigo-600 ring-4 ring-white">
+              {blog.owner.nickname.slice(0, 1)}
+            </div>
+          )}
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold">{blog.name}</h1>
+            {blog.description && <p className="mt-1 text-gray-600">{blog.description}</p>}
+            <p className="mt-1 text-sm text-gray-500">
+              {blog.owner.nickname} @{blog.owner.username}
+              {blog.owner.bio && ` · ${blog.owner.bio}`}
+            </p>
           </div>
-        )}
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">{blog.name}</h1>
-          {blog.description && <p className="mt-1 text-gray-600">{blog.description}</p>}
-          <p className="mt-1 text-sm text-gray-500">
-            {blog.owner.nickname} @{blog.owner.username}
-            {blog.owner.bio && ` · ${blog.owner.bio}`}
-          </p>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <Link to={`/@${username}/universe`}
+              className="bg-cosmos rounded-full px-4 py-1.5 text-center font-medium text-white shadow-sm ring-1 ring-indigo-400/30 hover:ring-indigo-300">
+              🌌 기록 우주
+            </Link>
+            {blog.isOwner && (
+              <>
+                <Link to="/write" className="rounded-full bg-gradient-to-r from-indigo-600 to-violet-500 px-4 py-1.5 font-medium text-white">
+                  글쓰기
+                </Link>
+                <Link to="/settings/categories" className="rounded-full border border-gray-300 px-4 py-1.5 hover:bg-gray-50">
+                  카테고리 관리
+                </Link>
+              </>
+            )}
+          </div>
         </div>
-        <Link to={`/@${username}/universe`}
-          className="rounded-md bg-gradient-to-r from-slate-900 to-violet-900 px-3 py-1.5 text-center text-sm text-white hover:opacity-90">
-          🌌 기록 우주
-        </Link>
-        {blog.isOwner && (
-          <div className="flex gap-2 text-sm">
-            <Link to="/write" className="rounded-md bg-indigo-600 px-3 py-1.5 text-white">
-              글쓰기
-            </Link>
-            <Link to="/settings/categories" className="rounded-md border border-gray-300 px-3 py-1.5">
-              카테고리 관리
-            </Link>
-          </div>
-        )}
       </header>
 
       <ActivityHeatmap username={username} viewerKey={viewer} />

@@ -64,8 +64,13 @@ export default function SignupPage() {
   const usernameHint = currentCheck ? USERNAME_HINT[currentCheck.reason] : null
 
   return (
-    <div className="mx-auto max-w-sm rounded-lg border border-gray-200 bg-white p-6">
-      <h1 className="mb-6 text-xl font-bold">회원가입</h1>
+    <div className="mx-auto max-w-sm overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className="bg-cosmos px-6 py-6 text-white">
+        <p className="text-xs tracking-widest text-indigo-200">✦ OWNLOG</p>
+        <h1 className="mt-1 text-xl font-bold">회원가입</h1>
+        <p className="mt-1 text-sm text-indigo-100/80">가입하면 나만의 블로그와 기록 우주가 생겨요.</p>
+      </div>
+      <div className="p-6">
       <form onSubmit={submit} className="space-y-4">
         <FormField label="이메일" name="email" type="email" value={form.email} onChange={change} error={fieldErrors.email} required autoComplete="email" />
         <FormField
@@ -117,6 +122,7 @@ export default function SignupPage() {
           로그인
         </Link>
       </p>
+      </div>
     </div>
   )
 }

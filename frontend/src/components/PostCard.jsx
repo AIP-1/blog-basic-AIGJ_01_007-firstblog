@@ -12,13 +12,13 @@ export default function PostCard({ post }) {
   const sealed = post.sealedAt && new Date(post.publishedAt).getTime() > now
 
   const body = (
-    <article className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white transition hover:shadow-md">
+    <article className="flex h-full flex-col overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-500/10">
       {post.thumbnailUrl ? (
         <img src={post.thumbnailUrl} alt="" loading="lazy" className="aspect-video w-full object-cover" />
       ) : (
         // 썸네일이 없으면 같은 크기의 대체 영역에 토픽 이름을 보여줘서 격자를 맞춰요 (P-02)
-        <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-indigo-50 to-gray-100 text-lg font-semibold text-indigo-300">
-          {post.topic?.name ?? 'OwnLog'}
+        <div className="bg-cosmos flex aspect-video w-full items-center justify-center text-lg font-semibold text-indigo-100/90">
+          ✦ {post.topic?.name ?? 'OwnLog'}
         </div>
       )}
       <div className="flex flex-1 flex-col gap-2 p-4">

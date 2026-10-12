@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import ErrorBoundary from './ErrorBoundary'
+import Logo from './Logo'
 
 /**
  * 모든 화면의 공통 틀: 상단 헤더 + 본문 (반응형).
@@ -35,13 +36,14 @@ export default function Layout() {
   ]
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b border-gray-200 bg-white">
+    <div className="flex min-h-screen flex-col">
+      <header className="sticky top-0 z-10 border-b border-gray-200/80 bg-white/85 backdrop-blur">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
-          <Link to="/" className="text-xl font-bold text-indigo-600">
-            OwnLog
+          <Link to="/" aria-label="OwnLog 홈">
+            <Logo />
           </Link>
-          <Link to="/universe" className="rounded-md px-2 py-1 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700" title="OwnLog 우주">
+          <Link to="/universe" title="OwnLog 우주"
+            className="rounded-full bg-space-950 px-3 py-1 text-sm font-medium text-indigo-100 shadow-sm ring-1 ring-indigo-400/30 hover:ring-indigo-300">
             🌌<span className="ml-1 hidden sm:inline">우주</span>
           </Link>
 
@@ -59,7 +61,7 @@ export default function Layout() {
           <nav className="relative ml-auto flex items-center gap-3 text-sm">
             {loading ? null : user ? (
               <>
-                <Link to="/write" className="rounded-md bg-indigo-600 px-3 py-1.5 font-medium text-white hover:bg-indigo-700">
+                <Link to="/write" className="rounded-full bg-gradient-to-r from-indigo-600 to-violet-500 px-4 py-1.5 font-medium text-white shadow-sm hover:from-indigo-700 hover:to-violet-600">
                   글쓰기
                 </Link>
                 <Link to={`/@${user.username}`} className="hover:text-indigo-600">
@@ -101,7 +103,7 @@ export default function Layout() {
                 <Link to="/login" className="hover:text-indigo-600">
                   로그인
                 </Link>
-                <Link to="/signup" className="rounded-md border border-indigo-600 px-3 py-1.5 text-indigo-600 hover:bg-indigo-50">
+                <Link to="/signup" className="rounded-full bg-gradient-to-r from-indigo-600 to-violet-500 px-4 py-1.5 font-medium text-white shadow-sm hover:from-indigo-700 hover:to-violet-600">
                   회원가입
                 </Link>
               </>
@@ -110,12 +112,25 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
         {/* 주소가 바뀌면 오류 화면도 초기화돼요 */}
         <ErrorBoundary key={location.pathname}>
           <Outlet />
         </ErrorBoundary>
       </main>
+
+      <footer className="border-t border-gray-200 bg-white">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-5 text-sm text-gray-500">
+          <span className="flex items-center gap-2">
+            <Logo className="scale-90" />
+            <span>기록이 시간과 연결로 자라는 블로그</span>
+          </span>
+          <span className="flex gap-4">
+            <Link to="/universe" className="hover:text-indigo-600">🌌 OwnLog 우주</Link>
+            <span>© 2026 OwnLog</span>
+          </span>
+        </div>
+      </footer>
     </div>
   )
 }

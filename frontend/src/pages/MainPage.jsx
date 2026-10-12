@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { errorMessage } from '../api/client'
 import { getMainPosts, getTopics } from '../api/posts'
+import HomeHero from '../components/HomeHero'
 import OpenedCapsules from '../components/OpenedCapsules'
 import Pagination from '../components/Pagination'
 import PostGrid from '../components/PostGrid'
@@ -50,6 +51,7 @@ export default function MainPage() {
 
   return (
     <section className="space-y-5">
+      {page === 1 && !topic && tab === 'latest' && <HomeHero />}
       {page === 1 && !topic && <OpenedCapsules />}
       <div className="flex items-end gap-4 border-b border-gray-200">
         {TABS.map(({ value, label }) => (
