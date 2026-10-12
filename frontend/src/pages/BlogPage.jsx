@@ -50,6 +50,10 @@ export default function BlogPage() {
             {blog.owner.bio && ` · ${blog.owner.bio}`}
           </p>
         </div>
+        <Link to={`/@${username}/universe`}
+          className="rounded-md bg-gradient-to-r from-slate-900 to-violet-900 px-3 py-1.5 text-center text-sm text-white hover:opacity-90">
+          🌌 기록 우주
+        </Link>
         {blog.isOwner && (
           <div className="flex gap-2 text-sm">
             <Link to="/write" className="rounded-md bg-indigo-600 px-3 py-1.5 text-white">

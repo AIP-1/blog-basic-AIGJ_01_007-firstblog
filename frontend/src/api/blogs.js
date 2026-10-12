@@ -14,3 +14,8 @@ export function getSidebar(username) {
 export function getBlogPosts(username, { categoryId, page }) {
   return api.get(`/blogs/${username}/posts`, { params: { categoryId: categoryId ?? undefined, page } }).then((r) => r.data)
 }
+
+/** API 14.1 기록 그래프 → { nodes, edges, truncated } */
+export function getGraph(username) {
+  return api.get(`/blogs/${username}/graph`).then((r) => r.data)
+}
