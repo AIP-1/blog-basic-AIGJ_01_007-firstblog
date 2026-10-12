@@ -86,6 +86,14 @@ cd frontend && npm install && npm run dev
 
 개발 중에는 Vite가 `/api`, `/uploads` 요청을 8080으로 넘겨 줘서 CORS 설정 없이 동작해요.
 
+### 시연용 데이터
+
+```bash
+LOCAL_SQL=1 node scripts/seed-demo.mjs        # 로컬 (기록 잔디용 예전 날짜까지 채워요)
+BASE=https://ownlog.java21.net node scripts/seed-demo.mjs   # 서버 (API로만 넣어요)
+```
+회원 5명(`codewave`, `tripnote`, `cookbook`, `bookworm`, `runner`, 이메일은 `아이디@demo.ownlog`, 비밀번호 `ownlog1234`)과 글 30개(타임캡슐 4개, `[[링크]]`, 비공개 글·카테고리), 임시저장, 댓글·답글·삭제된 댓글, 좋아요, 북마크, 신고가 들어가요. "3분 뒤에 열리는 기록"은 넣고 3분 뒤에 열려요.
+
 ### 테스트
 
 ```bash
