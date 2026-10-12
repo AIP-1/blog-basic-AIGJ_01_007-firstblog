@@ -9,10 +9,15 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-12
+
+> 첫 정식 버전 (발표·제출 버전). 0.x에서 만든 MVP와 기록 유니버스, 보안 점검 결과를 모두 담았어요.
+
 ### 추가
 - Git Flow 브랜치 전략(`main`·`develop`·`feature/*`·`release/*`·`hotfix/*`)과 버전 관리 규칙 (CLAUDE.md 11장)
 - 이 변경 기록(`CHANGELOG.md`), PR 템플릿, 작업 브랜치용 CI(`ci.yml`: 테스트만, 배포는 `main`만)
 - 지난 이력에 버전 태그 `v0.1.0` ~ `v0.6.0`
+- 버전 표시: 백엔드 `0.0.1-SNAPSHOT`, 프론트 `0.0.0` → `1.0.0`
 
 ## [0.6.0] - 2026-10-12
 
@@ -81,7 +86,8 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 - 기획(요구사항 명세), ERD, API 명세서 (2026-10-01 ~ 10-06)
 - 백엔드 REST API 38개 (Spring Boot 4.1, JWT, Flyway), 통합·동시성·롤백 테스트 121개
 
-[Unreleased]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v0.6.0...develop
+[Unreleased]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.0.0...develop
+[1.0.0]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v0.6.0...v1.0.0
 [0.6.0]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v0.3.0...v0.4.0
