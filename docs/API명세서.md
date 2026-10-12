@@ -76,6 +76,7 @@
 | 13.1 | GET | `/api/posts/{postId}/backlinks` | 이 글을 언급한 글 | 🔓 | LK-03 |
 | 13.2 | GET | `/api/posts/link-suggestions` | `[[` 자동완성 | 🔒 | LK-01 |
 | 14.1 | GET | `/api/blogs/{username}/graph` | 기록 우주 (별과 선) | 🔓 | GR-01 ~ GR-04 |
+| 14.2 | GET | `/api/blogs/{username}/activity` | 기록 잔디 | 🔓 | AC-01 ~ AC-04 |
 
 ---
 
@@ -1268,6 +1269,27 @@
   "truncated": false
 }
 ```
+
+**에러:** `USER_NOT_FOUND`
+
+### 14.2 기록 잔디
+`GET /api/blogs/{username}/activity` 🔓 · AC-01 ~ AC-04
+
+최근 365일(오늘 포함, **한국 날짜**)의 날짜별 쓴 글 수와 연속 기록을 줘요. `days`에는 **글을 쓴 날만** 있어요(0인 날은 없음). 타임캡슐은 봉인한 날로 세요. 방문자에게는 글·카테고리가 공개인 글만 세요.
+
+**응답 `200 OK`**
+```json
+{
+  "from": "2025-10-13", "to": "2026-10-12",
+  "days": [ { "date": "2026-10-11", "count": 1 }, { "date": "2026-10-12", "count": 2 } ],
+  "currentStreak": 2, "longestStreak": 5, "totalThisYear": 31
+}
+```
+- `currentStreak`: 오늘(아직 안 썼으면 어제)부터 거꾸로 하루도 빠짐없이 쓴 날 수
+- `longestStreak`: 최근 365일 안에서 가장 길게 이어 쓴 날 수
+- `totalThisYear`: 올해(1월 1일부터) 쓴 글 수
+
+**6.4 블로그 글 목록 변경**: 쿼리 `date`(선택, `YYYY-MM-DD`) 추가. 그날(한국 날짜) 쓴 글만 줘요(타임캡슐은 봉인한 날). 형식이 틀리면 `INVALID_INPUT`.
 
 **에러:** `USER_NOT_FOUND`
 

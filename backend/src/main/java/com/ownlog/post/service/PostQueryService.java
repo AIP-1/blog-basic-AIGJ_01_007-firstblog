@@ -7,6 +7,7 @@ import com.ownlog.global.common.PageResponse;
 import com.ownlog.global.error.BusinessException;
 import com.ownlog.global.error.ErrorCode;
 import com.ownlog.global.security.LoginUser;
+import com.ownlog.global.util.KstTime;
 import com.ownlog.global.util.LikePattern;
 import com.ownlog.link.service.PostLinkService;
 import com.ownlog.post.domain.Post;
@@ -22,6 +23,7 @@ import com.ownlog.tag.repository.TagRepository;
 import com.ownlog.topic.service.TopicService;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -144,12 +146,16 @@ public class PostQueryService {
 
     /** API 6.4 블로그 글 목록. 주인에게는 비공개 글과 비공개 카테고리의 글도 보여줘요 */
     @Transactional(readOnly = true)
-    public PageResponse<PostCard> getBlogPosts(String username, Long categoryId, LoginUser me, PageCondition page) {
+    public PageResponse<PostCard> getBlogPosts(String username, Long categoryId, LocalDate date, LoginUser me,
+                                               PageCondition page) {
         Blog blog = blogService.getActiveBlog(username);
         Pageable pageable = page.toPageable(Sort.unsorted());
+        // 날짜(KST)를 고르면 그날 0시 ~ 다음 날 0시, 안 고르면 전체 기간 (AC-03)
+        Instant dayStart = date == null ? Instant.EPOCH : KstTime.startOfDay(date);
+        Instant dayEnd = date == null ? Instant.parse("9999-12-31T00:00:00Z") : KstTime.startOfDay(date.plusDays(1));
         Page<PostCardRow> rows = blogService.isOwner(blog, me)
-                ? postRepository.findBlogPostsForOwner(blog.getId(), categoryId, pageable)
-                : postRepository.findBlogPostsForVisitor(blog.getId(), categoryId, pageable);
+                ? postRepository.findBlogPostsForOwner(blog.getId(), categoryId, dayStart, dayEnd, pageable)
+                : postRepository.findBlogPostsForVisitor(blog.getId(), categoryId, dayStart, dayEnd, pageable);
         return PageResponse.from(rows.map(PostCard::from));
     }
 }

@@ -5,6 +5,17 @@
 - 서비스 주소: https://ownlog.java21.net
 - 개발 기간: 2026-10-01 ~ 2026-10-14 (2주, MVP)
 
+## ✨ 독창 기능: 기록 유니버스
+
+> **"기록이 시간과 연결로 자라는 블로그"**. 글이 목록으로 쌓이기만 하는 대신, 시간 축과 연결 축으로 이어져요. ([설계서](docs/기록유니버스-설계.md))
+
+| 기능 | 내용 |
+|---|---|
+| ⏳ **타임캡슐** | 정한 시각(1분 ~ 10년 뒤)에 열리는 글. 봉인 중에는 잠금 카드와 카운트다운만 보이고, 0이 되면 새로고침 없이 열려요 |
+| 🔗 **`[[글]]` 연결** | 본문에서 `[[`를 입력하면 글 자동완성. 상세 하단에 "이 글을 언급한 글"(백링크). 볼 수 없는 글은 제목도 숨겨요 |
+| 🌌 **기록 우주** | `/@아이디/universe`: 글은 별, 링크와 같은 태그는 선. 끌고, 확대하고, 별을 누르면 글로 가요 |
+| 🌱 **기록 잔디** | 블로그 홈에 1년 잔디와 🔥 연속 기록. 칸을 누르면 그날의 기록 |
+
 ## 주요 기능
 
 | 구분 | 기능 |
@@ -21,7 +32,7 @@
 | 영역 | 사용 기술 |
 |---|---|
 | 백엔드 | Java 21, Spring Boot 4.1, Spring Security, Spring Data JPA, Flyway, JWT(jjwt) |
-| 프론트엔드 | React 19, Vite 8, React Router, Tailwind CSS 4, axios, react-markdown(+ rehype-sanitize) |
+| 프론트엔드 | React 19, Vite 8, React Router, Tailwind CSS 4, axios, react-markdown(+ rehype-sanitize), d3-force(기록 우주) |
 | 데이터베이스 | PostgreSQL 17 |
 | 테스트 | JUnit 5, MockMvc, Testcontainers(실제 PostgreSQL), 헤드리스 Chrome 화면 확인 |
 | 배포 | Docker, GitHub Actions, Nginx (수업 공용 서버) |
@@ -32,11 +43,12 @@
 ├── backend/                  Spring Boot REST API
 │   └── src/main/
 │       ├── java/com/ownlog/  auth, user, blog, category, post, tag, topic,
-│       │                     comment, reaction(좋아요·북마크), report, image, global
+│       │                     comment, reaction(좋아요·북마크), report, image,
+│       │                     link([[글]] 연결), universe(기록 우주·잔디), global
 │       └── resources/
 │           ├── application.yaml        로컬 설정 (.env 읽음)
 │           ├── application-prod.yaml   배포 설정
-│           └── db/migration/V1__init.sql   테이블 생성 (Flyway)
+│           └── db/migration/     V1 테이블 생성, V2 타임캡슐, V3 글 연결 (Flyway)
 ├── frontend/                 React SPA
 │   └── src/                  api, auth, components, hooks, pages, utils
 ├── deploy/deploy.sh          서버에서 컨테이너를 실행하는 스크립트
@@ -44,7 +56,7 @@
 ├── Dockerfile                화면 + API를 이미지 하나로 빌드
 ├── docker-compose.yml        로컬 개발용 PostgreSQL
 ├── 요구사항.md               요구사항 명세서
-└── docs/                     ERD.md, API명세서.md
+└── docs/                     ERD.md, API명세서.md, 기록유니버스-설계.md
 ```
 
 ## 문서

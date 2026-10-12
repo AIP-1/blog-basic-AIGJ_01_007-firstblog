@@ -1,6 +1,7 @@
 import { Link, useParams, useSearchParams } from 'react-router'
 import { getBlogHome, getBlogPosts, getSidebar } from '../api/blogs'
 import { useAuth } from '../auth/useAuth'
+import ActivityHeatmap from '../components/ActivityHeatmap'
 import Pagination from '../components/Pagination'
 import PostGrid from '../components/PostGrid'
 import UpcomingCapsules from '../components/UpcomingCapsules'
@@ -14,12 +15,13 @@ export default function BlogPage() {
   const { user } = useAuth()
   const [searchParams] = useSearchParams()
   const categoryId = searchParams.get('category')
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(searchParams.get('date') ?? '') ? searchParams.get('date') : null // AC-03
   const page = Number(searchParams.get('page')) || 1
   const viewer = user?.id // 주인에게는 비공개 글·카테고리까지 보여서 로그인 상태가 바뀌면 다시 불러와요
 
   const home = useAsync(() => getBlogHome(username), `${username}|${viewer}`)
   const sidebar = useAsync(() => getSidebar(username), `${username}|${viewer}`)
-  const posts = useAsync(() => getBlogPosts(username, { categoryId, page }), `${username}|${categoryId}|${page}|${viewer}`)
+  const posts = useAsync(() => getBlogPosts(username, { categoryId, date, page }), `${username}|${categoryId}|${date}|${page}|${viewer}`)
 
   if (!username) return <NotFoundPage /> // @로 시작하지 않으면 블로그 주소가 아니에요
   if (home.status === 404) return <NotFoundPage message="존재하지 않는 블로그예요" />
@@ -66,10 +68,12 @@ export default function BlogPage() {
         )}
       </header>
 
+      <ActivityHeatmap username={username} viewerKey={viewer} />
+
       <div className="flex flex-col gap-6 lg:flex-row">
         <aside className="lg:w-56 lg:shrink-0">
           <nav className="flex gap-1 overflow-x-auto lg:flex-col" aria-label="카테고리">
-            <Link to={`/@${username}`} className={linkClass(!categoryId)}>
+            <Link to={`/@${username}`} className={linkClass(!categoryId && !date)}>
               <span>전체</span>
               <span className="text-gray-400">{sidebar.data?.totalPostCount ?? ''}</span>
             </Link>
@@ -86,7 +90,15 @@ export default function BlogPage() {
         </aside>
 
         <section className="min-w-0 flex-1 space-y-4">
-          {!categoryId && page === 1 && <UpcomingCapsules username={username} viewerKey={viewer} />}
+          {!categoryId && !date && page === 1 && <UpcomingCapsules username={username} viewerKey={viewer} />}
+          {date && (
+            <div className="flex items-baseline gap-3">
+              <h2 className="text-lg font-semibold">📅 {date.replaceAll('-', '.')}의 기록</h2>
+              <Link to={`/@${username}`} className="text-sm text-gray-500 hover:text-indigo-600">전체 보기</Link>
+            </div>
+          )}
+          {/* 방문자: 그날 봉인한 캡슐은 목록에 없어서 따로 보여줘요 (주인은 목록에 🔒 카드로 나와요) */}
+          {date && !blog.isOwner && <UpcomingCapsules username={username} viewerKey={viewer} sealedOn={date} />}
           {current && <h2 className="mb-4 text-lg font-semibold">{current.name}</h2>}
           <PostGrid loading={posts.loading} error={posts.error} posts={posts.data?.content} />
           {!posts.loading && posts.data && <Pagination page={posts.data.page} totalPages={posts.data.totalPages} />}

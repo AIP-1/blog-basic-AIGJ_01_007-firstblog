@@ -58,22 +58,28 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             countQuery = COUNT + TAG_FROM + TAG_WHERE)
     Page<PostCardRow> findByTag(String tagName, Pageable pageable);
 
+    /**
+     * 6.4 블로그 글 목록의 날짜 필터 (AC-03 "그날의 기록"): 쓴 날(타임캡슐은 봉인한 날)이 [dayStart, dayEnd)인 글.
+     * 날짜를 고르지 않으면 dayStart, dayEnd에 아주 넓은 범위를 넣어서 조건이 항상 참이 되게 해요 (null 비교를 피하려고).
+     */
+    String WRITTEN_ON = " and coalesce(p.sealedAt, p.publishedAt) >= :dayStart and coalesce(p.sealedAt, p.publishedAt) < :dayEnd";
+
     /** 6.4 블로그 글 목록: 방문자용 (공개 조건 적용) */
     String BLOG_VISITOR_WHERE = " where b.id = :blogId and " + PUBLIC_CONDITION
-            + " and (:categoryId is null or c.id = :categoryId)";
+            + " and (:categoryId is null or c.id = :categoryId)" + WRITTEN_ON;
 
     @Query(value = SELECT_CARD + FROM_CARD + BLOG_VISITOR_WHERE + LATEST,
             countQuery = COUNT + FROM_CARD + BLOG_VISITOR_WHERE)
-    Page<PostCardRow> findBlogPostsForVisitor(Long blogId, Long categoryId, Pageable pageable);
+    Page<PostCardRow> findBlogPostsForVisitor(Long blogId, Long categoryId, Instant dayStart, Instant dayEnd, Pageable pageable);
 
     /** 6.4 블로그 글 목록: 주인용 (비공개 글, 비공개 카테고리 포함 / 임시저장은 제외) */
     String BLOG_OWNER_WHERE = " where b.id = :blogId"
             + " and p.status = com.ownlog.post.domain.PostStatus.PUBLISHED"
-            + " and (:categoryId is null or c.id = :categoryId)";
+            + " and (:categoryId is null or c.id = :categoryId)" + WRITTEN_ON;
 
     @Query(value = SELECT_CARD + FROM_CARD + BLOG_OWNER_WHERE + LATEST,
             countQuery = COUNT + FROM_CARD + BLOG_OWNER_WHERE)
-    Page<PostCardRow> findBlogPostsForOwner(Long blogId, Long categoryId, Pageable pageable);
+    Page<PostCardRow> findBlogPostsForOwner(Long blogId, Long categoryId, Instant dayStart, Instant dayEnd, Pageable pageable);
 
     // ---------------------------------------------------------------------------------
     // 타임캡슐 (API 12.1, 12.2)

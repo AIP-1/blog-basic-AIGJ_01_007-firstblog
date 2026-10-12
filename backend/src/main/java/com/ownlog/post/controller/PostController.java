@@ -14,6 +14,7 @@ import com.ownlog.post.service.PostService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -64,9 +65,10 @@ public class PostController {
     @GetMapping("/api/blogs/{username}/posts")
     public PageResponse<PostCard> getBlogPosts(@PathVariable String username,
                                                @RequestParam(required = false) Long categoryId,
+                                               @RequestParam(required = false) LocalDate date,   // AC-03 그날의 기록
                                                @AuthenticationPrincipal LoginUser me,
                                                @Valid @ModelAttribute PageCondition page) {
-        return postQueryService.getBlogPosts(username, categoryId, me, page);
+        return postQueryService.getBlogPosts(username, categoryId, date, me, page);
     }
 
     /** API 6.5 글 상세 (🔓) */

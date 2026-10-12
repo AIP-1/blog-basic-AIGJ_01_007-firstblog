@@ -10,12 +10,19 @@ export function getSidebar(username) {
   return api.get(`/blogs/${username}/categories`).then((r) => r.data)
 }
 
-/** API 6.4 블로그 글 목록 (categoryId는 선택) */
-export function getBlogPosts(username, { categoryId, page }) {
-  return api.get(`/blogs/${username}/posts`, { params: { categoryId: categoryId ?? undefined, page } }).then((r) => r.data)
+/** API 6.4 블로그 글 목록 (categoryId, date(YYYY-MM-DD, 그날의 기록)는 선택) */
+export function getBlogPosts(username, { categoryId, date, page }) {
+  return api
+    .get(`/blogs/${username}/posts`, { params: { categoryId: categoryId ?? undefined, date: date ?? undefined, page } })
+    .then((r) => r.data)
 }
 
 /** API 14.1 기록 그래프 → { nodes, edges, truncated } */
 export function getGraph(username) {
   return api.get(`/blogs/${username}/graph`).then((r) => r.data)
+}
+
+/** API 14.2 기록 잔디 → { from, to, days: [{ date, count }], currentStreak, longestStreak, totalThisYear } */
+export function getActivity(username) {
+  return api.get(`/blogs/${username}/activity`).then((r) => r.data)
 }

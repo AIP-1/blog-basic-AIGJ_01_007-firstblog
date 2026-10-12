@@ -2,6 +2,8 @@ package com.ownlog.universe.repository;
 
 import com.ownlog.post.domain.Post;
 import com.ownlog.universe.dto.GraphNodeRow;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
@@ -56,6 +58,28 @@ public interface GraphRepository extends Repository<Post, Long> {
              ORDER BY lower(tg.name)
             """, nativeQuery = true)
     List<PostTagRow> findTags(Collection<Long> ids);
+
+    /**
+     * 14.2 기록 잔디: 날짜(KST)별 쓴 글 수. 타임캡슐은 봉인한 날(실제로 쓴 날)로 세요 (AC-04).
+     * 방문자는 글·카테고리가 공개인 것만 (봉인 캡슐은 "봉인했다"는 사실이 12.1로 이미 공개라 포함해요).
+     */
+    @Query(value = """
+            SELECT CAST((COALESCE(p.sealed_at, p.published_at) AT TIME ZONE 'Asia/Seoul') AS date) AS "day",
+                   COUNT(*) AS "count"
+              FROM posts p JOIN categories c ON c.id = p.category_id
+             WHERE p.blog_id = :blogId AND p.status = 'PUBLISHED'
+               AND (:owner = true OR (p.visibility = 'PUBLIC' AND c.visibility = 'PUBLIC'))
+               AND COALESCE(p.sealed_at, p.published_at) >= :from
+             GROUP BY 1
+             ORDER BY 1
+            """, nativeQuery = true)
+    List<ActivityRow> findActivity(Long blogId, boolean owner, Instant from);
+
+    interface ActivityRow {
+        LocalDate getDay();
+
+        Long getCount();
+    }
 
     interface LinkEdgeRow {
         Long getSource();
