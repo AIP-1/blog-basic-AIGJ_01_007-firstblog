@@ -254,6 +254,18 @@ CREATE UNIQUE INDEX uk_tags_name_lower ON tags (LOWER(name));
 
 **표시 순서:** `post_tags`에는 순서 정보가 없어서, 글 상세에서는 태그를 **이름순**으로 정렬해서 보여줘요.
 
+### 3.5-1 `post_links` (글 연결, V3)
+본문의 `[[글번호|표시 글자]]`를 발행·수정할 때 분석해서 저장해요 (LK-04). 백링크와 기록 그래프가 써요.
+
+| 컬럼 | 타입 | NULL | 설명 |
+|---|---|---|---|
+| source_post_id | BIGINT | N | PK, FK → posts. 링크를 건 글 |
+| target_post_id | BIGINT | N | PK, FK → posts. 링크된 글 (발행 글만 저장해요) |
+| created_at | TIMESTAMPTZ | N | |
+
+- CHECK `ck_post_links_not_self`: 자기 자신 링크 금지.
+- 공개 여부는 **저장할 때가 아니라 읽을 때** 공개 조건(4.1)으로 판단해요. 비공개였다가 공개로 바뀌어도 링크가 그대로 살아 있어요.
+
 ### 3.6 `comments` (댓글과 대댓글)
 | 컬럼 | 타입 | NULL | 기본값 | 설명 |
 |---|---|---|---|---|
@@ -396,6 +408,9 @@ INSERT INTO topics (slug, name, display_order) VALUES
 | comments | `(post_id, parent_id, created_at)` | 글 상세의 댓글 목록 |
 | post_likes | `(post_id)` | 글 삭제 시 좋아요 함께 삭제 |
 | bookmarks | `(post_id)` | 글 삭제 시 북마크 함께 삭제 |
+| posts | `(blog_id, published_at) WHERE sealed_at IS NOT NULL` | 곧 열리는 타임캡슐 (TC-06, V2) |
+| posts | `(published_at DESC) WHERE sealed_at IS NOT NULL` | 최근 열린 타임캡슐 (TC-06, V2) |
+| post_links | `(target_post_id)` | 백링크 (LK-03, V3) |
 | blogs | `(user_id)` | 회원의 블로그 찾기 |
 | categories | `UNIQUE(blog_id) WHERE is_default = true` | 기본 카테고리를 1개로 보장 |
 
@@ -432,7 +447,7 @@ AND p.published_at <= now()   -- 봉인된 타임캡슐 제외 (V2, TC-03)
 | 상황 | 처리 |
 |---|---|
 | **회원 탈퇴** (U-06) | ① 본인 블로그의 글을 모두 Hard Delete해요 (아래 "글 삭제" 규칙이 함께 적용돼요) ② 본인 카테고리와 블로그를 삭제해요 ③ 본인이 누른 좋아요와 북마크를 삭제하고, 그 글의 `like_count`를 줄여요 ④ 다른 사람 글에 단 댓글은 남겨요 ⑤ `users`는 `status = DELETED`로 바꾸고 `deleted_at`을 기록해요 (Soft Delete). **개인정보도 지워요:** `email`은 `deleted_{id}@ownlog.invalid`, `nickname`은 `탈퇴한 사용자`, `password`는 무작위 값의 해시로 바꾸고, `bio`와 `profile_image_url`은 NULL로 바꾸고 프로필 이미지 파일을 삭제해요. `username`은 재사용 방지를 위해 그대로 둬요 |
-| **글 삭제** (P-04) | 해당 글의 댓글(그 댓글들에 대한 신고 포함), 좋아요, 북마크, `post_tags`, **글 신고 기록까지 함께 삭제**해요 (MVP 한정. 신고 기록 보존은 2차 관리자 기능과 함께 다뤄요) |
+| **글 삭제** (P-04) | 해당 글의 댓글(그 댓글들에 대한 신고 포함), 좋아요, 북마크, `post_tags`, **`post_links`(양쪽 방향)**, **글 신고 기록까지 함께 삭제**해요 (MVP 한정. 신고 기록 보존은 2차 관리자 기능과 함께 다뤄요) |
 | **카테고리 삭제** (B-04) | 그 카테고리의 글을 같은 블로그의 "미분류"로 옮긴 뒤 삭제해요. 기본 카테고리는 삭제할 수 없어요. **삭제하는 카테고리가 비공개면, 옮기는 글의 `visibility`를 모두 `PRIVATE`으로 바꿔서** 숨겨 둔 글이 노출되지 않게 해요 (B-05) |
 | **댓글 삭제** (C-01) | 댓글 작성자 또는 그 글의 블로그 주인이 삭제할 수 있어요. 답글이 있으면 `is_deleted = true`로 바꾸고 "삭제된 댓글입니다"로 표시해요 (행이 남으니 그 댓글의 신고 기록도 남아요). 답글이 없으면 그 댓글의 신고 기록과 함께 Hard Delete해요. **답글을 지운 뒤 부모가 `is_deleted = true`이고 남은 답글이 없으면 부모도 함께 Hard Delete해요** |
 | **좋아요 추가·취소** (C-03) | `post_likes`의 INSERT나 DELETE와 `posts.like_count ± 1`을 같은 트랜잭션에서 처리해요 |

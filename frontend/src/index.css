@@ -13,6 +13,7 @@ body {
 .markdown h3 { @apply mt-6 mb-2 text-lg font-semibold; }
 .markdown p { @apply my-4; }
 .markdown a { @apply text-indigo-600 underline; }
+.markdown a.post-link { @apply rounded bg-indigo-50 px-1 no-underline hover:bg-indigo-100; }
 .markdown ul { @apply my-4 list-disc pl-6; }
 .markdown ol { @apply my-4 list-decimal pl-6; }
 .markdown blockquote { @apply my-4 border-l-4 border-gray-300 pl-4 text-gray-600; }

@@ -4,6 +4,7 @@ import { errorMessage } from '../api/client'
 import { deletePost, getPostDetail, setBookmark, setLike } from '../api/posts'
 import { useRequireLogin } from '../auth/useRequireLogin'
 import { useAuth } from '../auth/useAuth'
+import Backlinks from '../components/Backlinks'
 import CommentSection from '../components/CommentSection'
 import MarkdownView from '../components/MarkdownView'
 import ReportDialog from '../components/ReportDialog'
@@ -132,7 +133,7 @@ export default function PostDetailPage() {
         )}
       </header>
 
-      <MarkdownView content={post.content} />
+      <MarkdownView content={post.content} linkedPosts={post.linkedPosts} />
 
       {post.tags.length > 0 && (
         <div className="mt-8 flex flex-wrap gap-2">
@@ -168,6 +169,7 @@ export default function PostDetailPage() {
         )}
       </div>
 
+      <Backlinks postId={post.id} viewerKey={user?.id} />
       <CommentSection postId={post.id} />
       {reporting && <ReportDialog target={{ postId: post.id }} onClose={() => setReporting(false)} />}
     </article>

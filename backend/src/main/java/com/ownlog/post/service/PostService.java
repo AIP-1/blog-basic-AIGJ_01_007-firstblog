@@ -8,6 +8,7 @@ import com.ownlog.global.error.BusinessException;
 import com.ownlog.global.error.ErrorCode;
 import com.ownlog.global.security.LoginUser;
 import com.ownlog.global.util.KstTime;
+import com.ownlog.link.service.PostLinkService;
 import com.ownlog.post.domain.Post;
 import com.ownlog.post.dto.PostCreateResponse;
 import com.ownlog.post.dto.PostRequest;
@@ -28,6 +29,7 @@ public class PostService {
     private final CategoryService categoryService;
     private final TopicService topicService;
     private final TagService tagService;
+    private final PostLinkService postLinkService;
 
     /** API 6.6 바로 발행. 블로그는 토큰의 회원으로 정해요 (요청에 blogId 없음) */
     @Transactional
@@ -40,6 +42,7 @@ public class PostService {
                 Visibility.orPublic(request.visibility()),
                 tagService.resolveTags(request.tags()),
                 TimeCapsulePolicy.openAtOrNull(request.openAt())));
+        postLinkService.sync(post);
         return new PostCreateResponse(post.getId(), me.username());
     }
 
@@ -55,6 +58,7 @@ public class PostService {
                 request.title().strip(), request.content(), request.thumbnailUrl(),
                 Visibility.orPublic(request.visibility()),
                 tagService.resolveTags(request.tags()));
+        postLinkService.sync(post);
         return new PostUpdateResponse(post.getId(), me.username(), KstTime.of(post.getEditedAt()));
     }
 
@@ -66,6 +70,7 @@ public class PostService {
         postRepository.deleteComments(postId);
         postRepository.deleteLikes(postId);
         postRepository.deleteBookmarks(postId);
+        postLinkService.deleteAllOf(postId);
         postRepository.delete(post);   // post_tags 행은 Hibernate가 먼저 지워요
     }
 

@@ -19,9 +19,9 @@ export default function AuthProvider({ children }) {
   useEffect(() => {
     if (!tokenStorage.get()) return
     api
-      .get('/users/me')
+      .get('/users/me', { skipAuthRedirect: true })
       .then(({ data }) => setUser(data))
-      .catch(() => tokenStorage.clear()) // 만료됐거나 탈퇴한 회원의 토큰이면 지워요
+      .catch(() => tokenStorage.clear()) // 만료됐거나 탈퇴한 회원의 토큰이면 지우고 비회원으로 계속 봐요 (공개 화면에서 튕기지 않게)
       .finally(() => setLoading(false))
   }, [])
 
@@ -29,6 +29,7 @@ export default function AuthProvider({ children }) {
   useEffect(() => {
     setUnauthorizedHandler(() => {
       setUser(null)
+      if (window.location.pathname === '/login') return // 이미 로그인 화면이면 redirect가 겹치지 않게
       const here = window.location.pathname + window.location.search
       navigate(`/login?redirect=${encodeURIComponent(here)}`)
     })

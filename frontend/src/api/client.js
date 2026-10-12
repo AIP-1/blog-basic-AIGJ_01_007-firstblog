@@ -27,8 +27,9 @@ export function setUnauthorizedHandler(handler) {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // 로그인 실패(INVALID_CREDENTIALS)도 401이지만, 그건 로그인 화면이 직접 보여줘야 해서 제외해요
-    if (error.response?.status === 401 && error.response.data?.code === 'UNAUTHORIZED') {
+    // 로그인 실패(INVALID_CREDENTIALS)도 401이지만, 그건 로그인 화면이 직접 보여줘야 해서 제외해요.
+    // skipAuthRedirect: 새로고침 때 로그인 복원처럼 "실패하면 조용히 로그아웃"할 요청은 로그인 화면으로 보내지 않아요
+    if (error.response?.status === 401 && error.response.data?.code === 'UNAUTHORIZED' && !error.config?.skipAuthRedirect) {
       tokenStorage.clear()
       handleUnauthorized()
     }

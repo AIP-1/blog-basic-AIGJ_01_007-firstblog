@@ -9,6 +9,7 @@ import com.ownlog.global.common.Visibility;
 import com.ownlog.global.error.BusinessException;
 import com.ownlog.global.error.ErrorCode;
 import com.ownlog.global.security.LoginUser;
+import com.ownlog.link.service.PostLinkService;
 import com.ownlog.post.domain.Post;
 import com.ownlog.post.domain.PostStatus;
 import com.ownlog.post.dto.DraftDetailResponse;
@@ -35,6 +36,7 @@ public class DraftService {
     private final CategoryService categoryService;
     private final TopicService topicService;
     private final TagService tagService;
+    private final PostLinkService postLinkService;
 
     /** API 7.1 처음 임시저장 → 받은 id로 다음부터는 7.2를 호출해요 */
     @Transactional
@@ -92,6 +94,7 @@ public class DraftService {
                 Visibility.orPublic(request.visibility()),
                 tagService.resolveTags(request.tags()),
                 TimeCapsulePolicy.openAtOrNull(request.openAt()));
+        postLinkService.sync(draft);
         return new PostCreateResponse(draft.getId(), me.username());
     }
 

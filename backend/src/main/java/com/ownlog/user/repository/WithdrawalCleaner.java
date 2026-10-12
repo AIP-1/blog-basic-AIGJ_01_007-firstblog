@@ -26,6 +26,8 @@ public class WithdrawalCleaner {
         jdbcTemplate.update("DELETE FROM post_likes WHERE post_id IN (" + MY_POSTS + ")", userId);
         jdbcTemplate.update("DELETE FROM bookmarks WHERE post_id IN (" + MY_POSTS + ")", userId);
         jdbcTemplate.update("DELETE FROM post_tags WHERE post_id IN (" + MY_POSTS + ")", userId);
+        jdbcTemplate.update("DELETE FROM post_links WHERE source_post_id IN (" + MY_POSTS + ")"
+                + " OR target_post_id IN (" + MY_POSTS + ")", userId, userId);
         jdbcTemplate.update("DELETE FROM posts WHERE blog_id IN (SELECT id FROM blogs WHERE user_id = ?)", userId);
         jdbcTemplate.update("DELETE FROM categories WHERE blog_id IN (SELECT id FROM blogs WHERE user_id = ?)", userId);
         jdbcTemplate.update("DELETE FROM blogs WHERE user_id = ?", userId);

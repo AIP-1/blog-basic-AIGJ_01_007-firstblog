@@ -4,12 +4,14 @@ import com.ownlog.blog.domain.Blog;
 import com.ownlog.category.domain.Category;
 import com.ownlog.global.common.Visibility;
 import com.ownlog.global.util.KstTime;
+import com.ownlog.link.dto.LinkTarget;
 import com.ownlog.post.domain.Post;
 import com.ownlog.tag.domain.Tag;
 import com.ownlog.topic.dto.TopicItem;
 import com.ownlog.user.dto.UserSummary;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 /** API 명세서 6.5 응답 */
 public record PostDetailResponse(
@@ -18,7 +20,8 @@ public record PostDetailResponse(
         UserSummary author, BlogInfo blog,
         int viewCount, int likeCount, boolean liked, boolean bookmarked, boolean isOwner,
         OffsetDateTime publishedAt, OffsetDateTime editedAt,
-        TimeCapsuleInfo timeCapsule   // 일반 글은 null
+        TimeCapsuleInfo timeCapsule,  // 일반 글은 null
+        Map<Long, LinkTarget> linkedPosts   // 본문 [[번호|글자]] 링크 대상 (LK-02)
 ) {
     /** 타임캡슐 정보 (TC-03). locked면 방문자에게 본문을 보여주지 않은 응답이에요 */
     public record TimeCapsuleInfo(OffsetDateTime sealedAt, OffsetDateTime openAt, boolean locked) {
@@ -36,8 +39,8 @@ public record PostDetailResponse(
     public record BlogInfo(Long id, String name) {
     }
 
-    public static PostDetailResponse of(Post post, int viewCount, boolean liked,
-                                        boolean bookmarked, boolean isOwner) {
+    public static PostDetailResponse of(Post post, int viewCount, boolean liked, boolean bookmarked,
+                                        boolean isOwner, Map<Long, LinkTarget> linkedPosts) {
         Category category = post.getCategory();
         Blog blog = post.getBlog();
         return new PostDetailResponse(
@@ -52,7 +55,7 @@ public record PostDetailResponse(
                 new BlogInfo(blog.getId(), blog.getName()),
                 viewCount, post.getLikeCount(), liked, bookmarked, isOwner,
                 KstTime.of(post.getPublishedAt()), KstTime.of(post.getEditedAt()),
-                TimeCapsuleInfo.of(post, false));
+                TimeCapsuleInfo.of(post, false), linkedPosts);
     }
 
     /** 방문자가 봉인된 타임캡슐을 열었을 때: 제목과 작성자, 봉인·개봉 시각만 (TC-03) */
@@ -67,6 +70,6 @@ public record PostDetailResponse(
                 new BlogInfo(blog.getId(), blog.getName()),
                 0, 0, false, false, false,
                 KstTime.of(post.getPublishedAt()), null,
-                TimeCapsuleInfo.of(post, true));
+                TimeCapsuleInfo.of(post, true), Map.of());
     }
 }

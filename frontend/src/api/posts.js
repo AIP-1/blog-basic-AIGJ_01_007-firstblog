@@ -57,3 +57,13 @@ export function createPost(body) {
 export function updatePost(postId, body) {
   return api.put(`/posts/${postId}`, body).then((r) => r.data)
 }
+
+/** API 13.1 이 글을 언급한 글 → [{ id, title, username, nickname, publishedAt }] */
+export function getBacklinks(postId) {
+  return api.get(`/posts/${postId}/backlinks`).then((r) => r.data)
+}
+
+/** API 13.2 [[ 자동완성 (내 글 먼저, 검색어가 있으면 다른 사람 공개 글도) */
+export function getLinkSuggestions(q) {
+  return api.get('/posts/link-suggestions', { params: { q } }).then((r) => r.data)
+}

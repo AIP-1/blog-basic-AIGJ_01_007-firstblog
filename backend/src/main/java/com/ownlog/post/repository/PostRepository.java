@@ -6,11 +6,13 @@ import static com.ownlog.post.repository.PostCardQueries.LATEST;
 import static com.ownlog.post.repository.PostCardQueries.PUBLIC_CONDITION;
 import static com.ownlog.post.repository.PostCardQueries.SELECT_CARD;
 
+import com.ownlog.link.dto.LinkedPostRow;
 import com.ownlog.post.domain.Post;
 import com.ownlog.post.dto.DraftItemRow;
 import com.ownlog.post.dto.PostCardRow;
 import com.ownlog.post.dto.TimeCapsuleRow;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -94,6 +96,36 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query(SELECT_CARD + FROM_CARD + " where " + PUBLIC_CONDITION
             + " and p.sealedAt is not null and p.publishedAt >= :since" + LATEST)
     List<PostCardRow> findOpenedCapsules(Instant since, Pageable pageable);
+
+    // ---------------------------------------------------------------------------------
+    // 글 연결 [[번호|글자]] (API 6.5 linkedPosts, 13.2)
+    // ---------------------------------------------------------------------------------
+
+    /** 링크 대상 글들을 공개 여부 판단에 필요한 연관 엔티티와 함께 (N+1 방지) */
+    @Query("""
+            select p from Post p
+              join fetch p.blog b
+              join fetch b.user
+              join fetch p.category
+             where p.id in :ids
+            """)
+    List<Post> findAllForLinks(Collection<Long> ids);
+
+    /** 13.2 자동완성: 내 발행 글 (비공개·봉인 포함), 제목 검색, 최신순 */
+    @Query("""
+            select new com.ownlog.link.dto.LinkedPostRow(p.id, p.title, u.username, u.nickname, p.publishedAt)
+              from Post p join p.blog b join b.user u
+             where u.id = :userId and p.status = com.ownlog.post.domain.PostStatus.PUBLISHED
+               and lower(p.title) like :pattern escape '\\'
+             order by p.publishedAt desc, p.id desc
+            """)
+    List<LinkedPostRow> findMyLinkCandidates(Long userId, String pattern, Pageable pageable);
+
+    /** 13.2 자동완성: 다른 사람의 공개 글 (공개 조건), 제목 검색, 최신순 */
+    @Query("select new com.ownlog.link.dto.LinkedPostRow(p.id, p.title, u.username, u.nickname, p.publishedAt)"
+            + FROM_CARD + " where " + PUBLIC_CONDITION
+            + " and u.id <> :userId and lower(p.title) like :pattern escape '\\'" + LATEST)
+    List<LinkedPostRow> findPublicLinkCandidates(Long userId, String pattern, Pageable pageable);
 
     /** 7.3 임시저장 목록: 내 블로그의 DRAFT만, 최근 저장 순 (본문은 읽지 않아요) */
     @Query(value = """

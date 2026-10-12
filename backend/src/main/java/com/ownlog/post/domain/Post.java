@@ -203,6 +203,11 @@ public class Post extends BaseTimeEntity {
         return isPublished() && visibility == Visibility.PUBLIC && !category.isPrivate();
     }
 
+    /** 이 회원(로그인 안 했으면 null)이 볼 수 있는 발행 글인가: 주인이면 비공개·봉인 중이어도 OK */
+    public boolean isViewableBy(Long userId) {
+        return isPublished() && ((userId != null && isOwnedBy(userId)) || isVisibleToPublic());
+    }
+
     public boolean isTimeCapsule() {
         return sealedAt != null;
     }

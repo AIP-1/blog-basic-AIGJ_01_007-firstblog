@@ -7,6 +7,8 @@ import com.ownlog.global.common.PageResponse;
 import com.ownlog.global.error.BusinessException;
 import com.ownlog.global.error.ErrorCode;
 import com.ownlog.global.security.LoginUser;
+import com.ownlog.global.util.LikePattern;
+import com.ownlog.link.service.PostLinkService;
 import com.ownlog.post.domain.Post;
 import com.ownlog.post.dto.PostCard;
 import com.ownlog.post.dto.PostCardRow;
@@ -21,7 +23,6 @@ import com.ownlog.topic.service.TopicService;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -43,6 +44,7 @@ public class PostQueryService {
     private final TagRepository tagRepository;
     private final BlogService blogService;
     private final TopicService topicService;
+    private final PostLinkService postLinkService;
 
     /**
      * API 6.5 글 상세. 조회수를 올리기 때문에 읽기 전용이 아닌 트랜잭션이에요.
@@ -73,7 +75,7 @@ public class PostQueryService {
 
         boolean liked = me != null && postRepository.existsLike(me.id(), postId);
         boolean bookmarked = me != null && postRepository.existsBookmark(me.id(), postId);
-        return PostDetailResponse.of(post, viewCount, liked, bookmarked, isOwner);
+        return PostDetailResponse.of(post, viewCount, liked, bookmarked, isOwner, postLinkService.linkTargets(post, me));
     }
 
     /**
@@ -89,8 +91,7 @@ public class PostQueryService {
 
     /** 볼 수 있나?만 참/거짓으로 (댓글 신고처럼 다른 에러 코드로 응답해야 할 때 써요) */
     public boolean isViewable(Post post, LoginUser me) {
-        boolean isOwner = me != null && post.isOwnedBy(me.id());
-        return post.isPublished() && (isOwner || post.isVisibleToPublic());
+        return post.isViewableBy(me == null ? null : me.id());
     }
 
     /** API 6.1 메인 최신·인기 (+ 토픽 필터) */
@@ -110,11 +111,7 @@ public class PostQueryService {
     /** API 6.2 검색 (q는 컨트롤러에서 1~50자 검증). %, _, \는 글자 그대로 찾도록 이스케이프해요 */
     @Transactional(readOnly = true)
     public PageResponse<PostCard> search(String keyword, PageCondition page) {
-        String escaped = keyword.strip().toLowerCase(Locale.ROOT)
-                .replace("\\", "\\\\")
-                .replace("%", "\\%")
-                .replace("_", "\\_");
-        Page<PostCardRow> rows = postRepository.search("%" + escaped + "%", page.toPageable(Sort.unsorted()));
+        Page<PostCardRow> rows = postRepository.search(LikePattern.contains(keyword), page.toPageable(Sort.unsorted()));
         return PageResponse.from(rows.map(PostCard::from));
     }
 

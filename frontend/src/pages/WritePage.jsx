@@ -1,5 +1,5 @@
 import MDEditor from '@uiw/react-md-editor/nohighlight'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import rehypeSanitize from 'rehype-sanitize'
 import { getSidebar } from '../api/blogs'
@@ -8,10 +8,18 @@ import { createDraft, getDraft, publishDraft, saveDraft } from '../api/drafts'
 import { uploadImage } from '../api/images'
 import { createPost, getPostDetail, getTopics, updatePost } from '../api/posts'
 import { useAuth } from '../auth/useAuth'
+import LinkSuggestions from '../components/LinkSuggestions'
 import TagInput from '../components/TagInput'
 import TimeCapsulePicker from '../components/TimeCapsulePicker'
 import { formatDateTime, formatTime, kstInputToIso } from '../utils/format'
 import NotFoundPage from './NotFoundPage'
+
+/** 커서 앞이 "[[검색어"면 그 위치와 검색어를 돌려줘요 (LK-01) */
+function findLinkQuery(textarea) {
+  const pos = textarea.selectionStart
+  const match = textarea.value.slice(0, pos).match(/\[\[([^[\]\n|]{0,30})$/)
+  return match ? { start: pos - match[0].length, end: pos, q: match[1] } : null
+}
 
 const EMPTY = { title: '', content: '', thumbnailUrl: null, categoryId: null, topicId: null, tags: [], visibility: 'PUBLIC' }
 
@@ -36,6 +44,13 @@ export default function WritePage() {
   const [fieldErrors, setFieldErrors] = useState({})
   const [categories, setCategories] = useState([])
   const [topics, setTopics] = useState([])
+  const [linkQuery, setLinkQuery] = useState(null) // [[ 자동완성: { start, end, q }
+  const [linkActive, setLinkActive] = useState(0)
+  const linkItems = useRef([])
+  const onLinkItems = useCallback((list) => {
+    linkItems.current = list
+    setLinkActive(0)
+  }, [])
   const imageInput = useRef(null)
   const thumbnailInput = useRef(null)
 
@@ -140,6 +155,47 @@ export default function WritePage() {
     })
   }
 
+  /** 자동완성에서 고른 글을 [[번호|제목]]으로 넣어요. 제목의 ]와 줄바꿈은 링크 문법이 깨지지 않게 바꿔요 */
+  const pickLink = (post) => {
+    const label = post.title.replace(/]/g, ')').replace(/\n/g, ' ')
+    const inserted = `[[${post.id}|${label}]]`
+    const { start, end } = linkQuery
+    update({ content: form.content.slice(0, start) + inserted + form.content.slice(end) })
+    setLinkQuery(null)
+    requestAnimationFrame(() => {
+      const textarea = document.querySelector('textarea[aria-label="본문"]')
+      textarea?.focus()
+      textarea?.setSelectionRange(start + inserted.length, start + inserted.length)
+    })
+  }
+
+  const onEditorKeyDown = (e) => {
+    if (!linkQuery) return
+    const count = linkItems.current.length
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      setLinkQuery(null)
+    } else if (count && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      e.preventDefault()
+      setLinkActive((i) => (i + (e.key === 'ArrowDown' ? 1 : count - 1)) % count)
+    } else if (count && (e.key === 'Enter' || e.key === 'Tab')) {
+      e.preventDefault()
+      pickLink(linkItems.current[linkActive] ?? linkItems.current[0])
+    }
+  }
+
+  /** 툴바 "🔗 글 연결": 커서 자리에 [[를 넣고 자동완성을 열어요 */
+  const startLink = () => {
+    const textarea = document.querySelector('textarea[aria-label="본문"]')
+    const pos = textarea ? textarea.selectionStart : form.content.length
+    update({ content: `${form.content.slice(0, pos)}[[${form.content.slice(pos)}` })
+    setLinkQuery({ start: pos, end: pos + 2, q: '' })
+    requestAnimationFrame(() => {
+      textarea?.focus()
+      textarea?.setSelectionRange(pos + 2, pos + 2)
+    })
+  }
+
   const upload = async (file, onUrl) => {
     if (!file) return
     try {
@@ -210,6 +266,9 @@ export default function WritePage() {
         <button type="button" onClick={() => imageInput.current.click()} className="rounded-md border border-gray-300 bg-white px-3 py-1.5">
           본문에 이미지 넣기
         </button>
+        <button type="button" onClick={startLink} className="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-indigo-700">
+          🔗 글 연결
+        </button>
         <button type="button" onClick={() => thumbnailInput.current.click()} className="rounded-md border border-gray-300 bg-white px-3 py-1.5">
           썸네일 {form.thumbnailUrl ? '바꾸기' : '올리기'}
         </button>
@@ -228,14 +287,30 @@ export default function WritePage() {
           onChange={(e) => upload(e.target.files[0], (url) => update({ thumbnailUrl: url }))} />
       </div>
 
-      <div data-color-mode="light">
+      <div data-color-mode="light" className="relative">
         <MDEditor
           value={form.content}
-          onChange={(value) => update({ content: value ?? '' })}
+          onChange={(value, event) => {
+            update({ content: value ?? '' })
+            if (event?.target) setLinkQuery(findLinkQuery(event.target))
+          }}
           height={480}
           previewOptions={{ rehypePlugins: [[rehypeSanitize]] }}
-          textareaProps={{ placeholder: '마크다운으로 글을 써 보세요', 'aria-label': '본문', maxLength: 100000 }}
+          textareaProps={{
+            placeholder: '마크다운으로 글을 써 보세요. [[를 입력하면 다른 글을 연결할 수 있어요',
+            'aria-label': '본문',
+            maxLength: 100000,
+            onKeyDown: onEditorKeyDown,
+            onBlur: () => setTimeout(() => setLinkQuery(null), 150),
+          }}
         />
+        {/* 입력하는 동안 보이도록 편집기 위에 띄워요 (넓은 화면은 오른쪽 미리보기 자리, 휴대폰은 위쪽) */}
+        {linkQuery && (
+          <div className="absolute inset-x-2 top-12 z-20 sm:left-auto sm:w-96">
+            <LinkSuggestions query={linkQuery.q} active={linkActive} onItems={onLinkItems} onPick={pickLink}
+              onClose={() => setLinkQuery(null)} myUsername={user.username} />
+          </div>
+        )}
       </div>
       {fieldErrors.content && <p className="text-sm text-red-600">{fieldErrors.content}</p>}
 
