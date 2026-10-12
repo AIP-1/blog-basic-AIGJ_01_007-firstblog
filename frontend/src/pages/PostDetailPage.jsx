@@ -7,8 +7,10 @@ import { useAuth } from '../auth/useAuth'
 import CommentSection from '../components/CommentSection'
 import MarkdownView from '../components/MarkdownView'
 import ReportDialog from '../components/ReportDialog'
+import SealedCapsule from '../components/SealedCapsule'
 import { useAsync } from '../hooks/useAsync'
-import { formatDate } from '../utils/format'
+import { useNow } from '../hooks/useNow'
+import { formatDate, formatDateTime } from '../utils/format'
 import NotFoundPage from './NotFoundPage'
 
 /** 글 상세 (P-05, P-06): 마크다운 본문, 작성일·수정일, 태그, 좋아요·북마크·신고, 댓글 */
@@ -16,13 +18,15 @@ export default function PostDetailPage() {
   const { handle, postId } = useParams()
   const { user } = useAuth()
   const username = handle.startsWith('@') ? handle.slice(1) : null
+  const [reloadCount, setReloadCount] = useState(0) // 타임캡슐이 열리는 순간 다시 불러올 때 써요
   const { data: post, error, status, loading, setData } = useAsync(
     () => getPostDetail(username, postId),
-    `${username}|${postId}|${user?.id}`,
+    `${username}|${postId}|${user?.id}|${reloadCount}`,
   )
   const navigate = useNavigate()
   const requireLogin = useRequireLogin()
   const [reporting, setReporting] = useState(false)
+  const now = useNow(30_000)
 
   if (!username) return <NotFoundPage />
   if (status === 404) return <NotFoundPage message="존재하지 않는 글이에요" />
@@ -59,6 +63,27 @@ export default function PostDetailPage() {
     }
   }
 
+  const capsule = post.timeCapsule
+  // 방문자가 보는 봉인된 타임캡슐: 제목과 카운트다운만 (TC-03)
+  if (capsule?.locked) {
+    return (
+      <article className="mx-auto max-w-3xl space-y-6">
+        <header className="space-y-2">
+          <p className="text-sm font-medium text-violet-600">⏳ 타임캡슐</p>
+          <h1 className="text-2xl font-bold sm:text-3xl">{post.title}</h1>
+          <p className="text-sm text-gray-500">
+            <Link to={`/@${username}`} className="font-medium text-gray-800 hover:text-indigo-600">
+              {post.author.nickname}
+            </Link>
+            의 기록
+          </p>
+        </header>
+        <SealedCapsule capsule={capsule} onOpen={() => setReloadCount((n) => n + 1)} />
+      </article>
+    )
+  }
+  const sealedForOwner = capsule && new Date(capsule.openAt).getTime() > now
+
   const hidden = post.visibility === 'PRIVATE' || post.category.visibility === 'PRIVATE'
   return (
     <article className="mx-auto max-w-3xl">
@@ -73,6 +98,9 @@ export default function PostDetailPage() {
             </Link>
           )}
           {hidden && <span className="rounded bg-gray-100 px-2 py-0.5 text-gray-600">🔒 비공개</span>}
+          {capsule && (
+            <span className="rounded bg-violet-50 px-2 py-0.5 text-violet-700">⏳ {formatDate(capsule.sealedAt)}에 봉인된 기록</span>
+          )}
         </div>
         <h1 className="text-2xl font-bold sm:text-3xl">{post.title}</h1>
         <p className="text-sm text-gray-500">
@@ -80,16 +108,23 @@ export default function PostDetailPage() {
             {post.author.nickname}
           </Link>
           {' · '}
-          {formatDate(post.publishedAt)}
+          {capsule ? `${formatDate(capsule.sealedAt)} 봉인 → ${formatDate(capsule.openAt)} 개봉` : formatDate(post.publishedAt)}
           {post.editedAt && ` (수정 ${formatDate(post.editedAt)})`}
           {' · 조회 '}
           {post.viewCount}
         </p>
+        {sealedForOwner && (
+          <p className="rounded-md bg-violet-50 px-3 py-2 text-sm text-violet-800">
+            🔒 봉인 중인 타임캡슐이에요. {formatDateTime(capsule.openAt)}에 공개되고, 그때까지는 나만 볼 수 있어요.
+          </p>
+        )}
         {post.isOwner && (
           <div className="flex gap-3 text-sm">
-            <Link to={`/write/${post.id}`} className="text-gray-600 hover:text-indigo-600">
-              수정
-            </Link>
+            {!sealedForOwner && (
+              <Link to={`/write/${post.id}`} className="text-gray-600 hover:text-indigo-600">
+                수정
+              </Link>
+            )}
             <button type="button" onClick={remove} className="text-gray-600 hover:text-red-600">
               삭제
             </button>

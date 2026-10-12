@@ -10,13 +10,14 @@ import java.time.OffsetDateTime;
 public record PostCard(
         Long id, String title, String summary, String thumbnailUrl, int likeCount,
         OffsetDateTime publishedAt, UserSummary author, TopicItem topic,
-        Visibility visibility, Visibility categoryVisibility) {
+        Visibility visibility, Visibility categoryVisibility,
+        OffsetDateTime sealedAt) {   // 타임캡슐이면 봉인 시각, 일반 글은 null (TC-06 배지)
 
     public static PostCard from(PostCardRow row) {
         return new PostCard(row.id(), row.title(), row.summary(), row.thumbnailUrl(), row.likeCount(),
                 KstTime.of(row.publishedAt()),
                 UserSummary.of(row.username(), row.nickname(), row.profileImageUrl(), row.userStatus()),
                 row.topicId() == null ? null : new TopicItem(row.topicId(), row.topicSlug(), row.topicName()),
-                row.visibility(), row.categoryVisibility());
+                row.visibility(), row.categoryVisibility(), KstTime.of(row.sealedAt()));
     }
 }

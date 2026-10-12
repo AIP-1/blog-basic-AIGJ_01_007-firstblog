@@ -3,6 +3,7 @@ import { getBlogHome, getBlogPosts, getSidebar } from '../api/blogs'
 import { useAuth } from '../auth/useAuth'
 import Pagination from '../components/Pagination'
 import PostGrid from '../components/PostGrid'
+import UpcomingCapsules from '../components/UpcomingCapsules'
 import { useAsync } from '../hooks/useAsync'
 import NotFoundPage from './NotFoundPage'
 
@@ -80,7 +81,8 @@ export default function BlogPage() {
           </nav>
         </aside>
 
-        <section className="min-w-0 flex-1">
+        <section className="min-w-0 flex-1 space-y-4">
+          {!categoryId && page === 1 && <UpcomingCapsules username={username} viewerKey={viewer} />}
           {current && <h2 className="mb-4 text-lg font-semibold">{current.name}</h2>}
           <PostGrid loading={posts.loading} error={posts.error} posts={posts.data?.content} />
           {!posts.loading && posts.data && <Pagination page={posts.data.page} totalPages={posts.data.totalPages} />}

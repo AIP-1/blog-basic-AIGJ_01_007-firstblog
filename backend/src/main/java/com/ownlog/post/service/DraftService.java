@@ -90,7 +90,8 @@ public class DraftService {
                 topicService.getTopicOrNull(request.topicId()),
                 request.title().strip(), request.content(), request.thumbnailUrl(),
                 Visibility.orPublic(request.visibility()),
-                tagService.resolveTags(request.tags()));
+                tagService.resolveTags(request.tags()),
+                TimeCapsulePolicy.openAtOrNull(request.openAt()));
         return new PostCreateResponse(draft.getId(), me.username());
     }
 

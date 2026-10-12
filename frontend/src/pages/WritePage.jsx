@@ -9,7 +9,8 @@ import { uploadImage } from '../api/images'
 import { createPost, getPostDetail, getTopics, updatePost } from '../api/posts'
 import { useAuth } from '../auth/useAuth'
 import TagInput from '../components/TagInput'
-import { formatTime } from '../utils/format'
+import TimeCapsulePicker from '../components/TimeCapsulePicker'
+import { formatDateTime, formatTime, kstInputToIso } from '../utils/format'
 import NotFoundPage from './NotFoundPage'
 
 const EMPTY = { title: '', content: '', thumbnailUrl: null, categoryId: null, topicId: null, tags: [], visibility: 'PUBLIC' }
@@ -25,7 +26,8 @@ export default function WritePage() {
   const navigate = useNavigate()
 
   const [form, setForm] = useState(EMPTY)
-  const [mode, setMode] = useState(postId ? 'loading' : 'new') // new | draft | published | loading | notfound
+  const [mode, setMode] = useState(postId ? 'loading' : 'new') // new | draft | published | sealed | loading | notfound
+  const [capsule, setCapsule] = useState({ enabled: false, openAt: '' }) // 타임캡슐 (TC-01)
   const [draftId, setDraftId] = useState(null)
   const [savedAt, setSavedAt] = useState(null)
   const [dirty, setDirty] = useState(false)
@@ -62,7 +64,10 @@ export default function WritePage() {
           .then((p) => {
             if (!p.isOwner) throw new Error()
             setForm(toForm(p))
-            setMode('published')
+            // 봉인 중인 타임캡슐은 열릴 때까지 수정할 수 없어요 (TC-04)
+            const sealed = p.timeCapsule && new Date(p.timeCapsule.openAt) > new Date()
+            if (sealed) setCapsule({ enabled: true, openAt: p.timeCapsule.openAt })
+            setMode(sealed ? 'sealed' : 'published')
           })
           .catch(() => setMode('notfound')),
       )
@@ -117,17 +122,23 @@ export default function WritePage() {
       setDirty(false)
     })
 
-  const publish = () =>
-    run(async () => {
+  const publish = () => {
+    const openAt = mode !== 'published' && capsule.enabled ? kstInputToIso(capsule.openAt) : null
+    if (capsule.enabled && mode !== 'published') {
+      if (!capsule.openAt) return setError('열리는 시각을 정해 주세요.')
+      if (!window.confirm(`${formatDateTime(openAt)}에 열리는 타임캡슐로 봉인할까요?\n열릴 때까지 수정할 수 없어요.`)) return
+    }
+    return run(async () => {
       const result =
         mode === 'published'
           ? await updatePost(postId, body())
           : draftId
-            ? await publishDraft(draftId, body())
-            : await createPost(body())
+            ? await publishDraft(draftId, { ...body(), openAt })
+            : await createPost({ ...body(), openAt })
       setDirty(false)
       navigate(`/@${user.username}/posts/${result.id ?? postId}`)
     })
+  }
 
   const upload = async (file, onUrl) => {
     if (!file) return
@@ -140,6 +151,18 @@ export default function WritePage() {
 
   if (mode === 'loading') return <p className="py-16 text-center text-gray-500">불러오는 중…</p>
   if (mode === 'notfound') return <NotFoundPage message="수정할 수 없는 글이에요" />
+  if (mode === 'sealed') {
+    return (
+      <div className="py-16 text-center">
+        <p className="text-4xl">🔒</p>
+        <p className="mt-4 font-semibold">봉인된 타임캡슐은 열리기 전까지 수정할 수 없어요.</p>
+        <p className="mt-1 text-sm text-gray-500">{formatDateTime(capsule.openAt)}에 열려요.</p>
+        <button type="button" onClick={() => navigate(-1)} className="mt-6 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm">
+          돌아가기
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -216,6 +239,10 @@ export default function WritePage() {
       </div>
       {fieldErrors.content && <p className="text-sm text-red-600">{fieldErrors.content}</p>}
 
+      {mode !== 'published' && (
+        <TimeCapsulePicker value={capsule} onChange={(next) => { setCapsule(next); setDirty(true) }} />
+      )}
+
       <div className="sticky bottom-0 flex flex-wrap items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 py-3">
         {error && <p className="mr-auto text-sm text-red-600">{error}</p>}
         {savedAt && <span className="text-sm text-gray-500">임시저장됨 ({formatTime(savedAt)})</span>}
@@ -225,7 +252,7 @@ export default function WritePage() {
           </button>
         )}
         <button type="button" disabled={busy} onClick={publish} className="rounded-md bg-indigo-600 px-4 py-2 font-medium text-white disabled:opacity-50">
-          {mode === 'published' ? '수정 완료' : '발행'}
+          {mode === 'published' ? '수정 완료' : capsule.enabled ? '⏳ 봉인하기' : '발행'}
         </button>
       </div>
     </div>

@@ -83,8 +83,11 @@ public class Post extends BaseTimeEntity {
     @Column(nullable = false, insertable = false, updatable = false)
     private int likeCount;
 
-    /** 화면의 작성일 (처음 발행한 시각) */
+    /** 화면의 작성일 (처음 발행한 시각). 타임캡슐이면 개봉 시각이에요 (공개 조건이 이 값으로 봉인 글을 걸러요) */
     private Instant publishedAt;
+
+    /** 타임캡슐을 봉인한(실제로 쓴) 시각. null이면 일반 글이에요 (TC-01) */
+    private Instant sealedAt;
 
     /** 화면의 수정일 (발행 후 제목·본문·썸네일·태그를 바꾼 시각) */
     private Instant editedAt;
@@ -95,14 +98,13 @@ public class Post extends BaseTimeEntity {
             inverseJoinColumns = @JoinColumn(name = "tag_id"))
     private Set<Tag> tags = new HashSet<>();
 
-    /** 바로 발행 (P-01) */
+    /** 바로 발행 (P-01). openAt이 있으면 그 시각에 열리는 타임캡슐로 발행해요 (TC-01) */
     public static Post publish(Blog blog, Category category, Topic topic, String title, String content,
-                               String thumbnailUrl, Visibility visibility, Set<Tag> tags) {
+                               String thumbnailUrl, Visibility visibility, Set<Tag> tags, Instant openAt) {
         Post post = new Post();
         post.blog = blog;
-        post.status = PostStatus.PUBLISHED;
-        post.publishedAt = Instant.now();
         post.apply(category, topic, title, content, thumbnailUrl, visibility, tags);
+        post.markPublished(openAt);
         return post;
     }
 
@@ -125,11 +127,18 @@ public class Post extends BaseTimeEntity {
 
     /** 임시저장 글 발행 (D-05): 화면의 최신 내용을 저장하면서 발행해요. 작성일은 발행한 시각이에요 */
     public void publishDraft(Category category, Topic topic, String title, String content,
-                             String thumbnailUrl, Visibility visibility, Set<Tag> tags) {
+                             String thumbnailUrl, Visibility visibility, Set<Tag> tags, Instant openAt) {
         requireDraft();
         apply(category, topic, title, content, thumbnailUrl, visibility, tags);
+        markPublished(openAt);
+    }
+
+    /** 일반 글은 지금 공개, 타임캡슐은 지금 봉인하고 openAt에 공개 */
+    private void markPublished(Instant openAt) {
+        Instant now = Instant.now();
         this.status = PostStatus.PUBLISHED;
-        this.publishedAt = Instant.now();
+        this.sealedAt = openAt == null ? null : now;
+        this.publishedAt = openAt == null ? now : openAt;
     }
 
     private void requireDraft() {
@@ -184,8 +193,22 @@ public class Post extends BaseTimeEntity {
         return status == PostStatus.PUBLISHED;
     }
 
-    /** 방문자가 볼 수 있는 글인가 (ERD 4.1): 발행 + 글 공개 + 카테고리 공개 */
+    /** 방문자가 볼 수 있는 글인가 (ERD 4.1): 발행 + 글 공개 + 카테고리 공개 + 봉인 중이 아님 (TC-03) */
     public boolean isVisibleToPublic() {
+        return isPublicExceptSeal() && !isSealed();
+    }
+
+    /** 봉인만 아니면 공개될 글인가. 봉인된 공개 캡슐은 방문자에게 잠금 카드로 보여줘요 (TC-03) */
+    public boolean isPublicExceptSeal() {
         return isPublished() && visibility == Visibility.PUBLIC && !category.isPrivate();
+    }
+
+    public boolean isTimeCapsule() {
+        return sealedAt != null;
+    }
+
+    /** 아직 열리지 않은 타임캡슐인가 (TC-05: 개봉 시각이 지나면 저절로 false) */
+    public boolean isSealed() {
+        return isTimeCapsule() && publishedAt.isAfter(Instant.now());
     }
 }

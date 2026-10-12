@@ -9,7 +9,9 @@ import static com.ownlog.post.repository.PostCardQueries.SELECT_CARD;
 import com.ownlog.post.domain.Post;
 import com.ownlog.post.dto.DraftItemRow;
 import com.ownlog.post.dto.PostCardRow;
+import com.ownlog.post.dto.TimeCapsuleRow;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -70,6 +72,28 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query(value = SELECT_CARD + FROM_CARD + BLOG_OWNER_WHERE + LATEST,
             countQuery = COUNT + FROM_CARD + BLOG_OWNER_WHERE)
     Page<PostCardRow> findBlogPostsForOwner(Long blogId, Long categoryId, Pageable pageable);
+
+    // ---------------------------------------------------------------------------------
+    // 타임캡슐 (API 12.1, 12.2)
+    // ---------------------------------------------------------------------------------
+
+    /** 12.1 곧 열리는 타임캡슐: 봉인 중인 글, 개봉 빠른 순. 방문자는 공개 글·공개 카테고리만 */
+    @Query("""
+            select new com.ownlog.post.dto.TimeCapsuleRow(p.id, p.title, p.sealedAt, p.publishedAt)
+              from Post p join p.category c
+             where p.blog.id = :blogId
+               and p.status = com.ownlog.post.domain.PostStatus.PUBLISHED
+               and p.sealedAt is not null and p.publishedAt > current_timestamp
+               and (:owner = true or (p.visibility = com.ownlog.global.common.Visibility.PUBLIC
+                                      and c.visibility = com.ownlog.global.common.Visibility.PUBLIC))
+             order by p.publishedAt asc, p.id asc
+            """)
+    List<TimeCapsuleRow> findSealedCapsules(Long blogId, boolean owner, Pageable pageable);
+
+    /** 12.2 최근 열린 타임캡슐: 공개 조건 + 개봉 시각이 since 이후, 최근 개봉 순 */
+    @Query(SELECT_CARD + FROM_CARD + " where " + PUBLIC_CONDITION
+            + " and p.sealedAt is not null and p.publishedAt >= :since" + LATEST)
+    List<PostCardRow> findOpenedCapsules(Instant since, Pageable pageable);
 
     /** 7.3 임시저장 목록: 내 블로그의 DRAFT만, 최근 저장 순 (본문은 읽지 않아요) */
     @Query(value = """

@@ -38,7 +38,8 @@ public class PostService {
                 topicService.getTopicOrNull(request.topicId()),
                 request.title().strip(), request.content(), request.thumbnailUrl(),
                 Visibility.orPublic(request.visibility()),
-                tagService.resolveTags(request.tags())));
+                tagService.resolveTags(request.tags()),
+                TimeCapsulePolicy.openAtOrNull(request.openAt())));
         return new PostCreateResponse(post.getId(), me.username());
     }
 
@@ -46,6 +47,9 @@ public class PostService {
     @Transactional
     public PostUpdateResponse update(Long postId, LoginUser me, PostRequest request) {
         Post post = getPostForOwner(postId, me);
+        if (post.isSealed()) {
+            throw new BusinessException(ErrorCode.TIME_CAPSULE_SEALED);   // 봉인 중에는 수정 불가 (TC-04)
+        }
         post.edit(categoryService.getCategoryForPost(post.getBlog(), request.categoryId()),
                 topicService.getTopicOrNull(request.topicId()),
                 request.title().strip(), request.content(), request.thumbnailUrl(),

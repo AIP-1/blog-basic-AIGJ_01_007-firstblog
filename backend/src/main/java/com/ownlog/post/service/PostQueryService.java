@@ -13,16 +13,19 @@ import com.ownlog.post.dto.PostCardRow;
 import com.ownlog.post.dto.PostDetailResponse;
 import com.ownlog.post.dto.PostSort;
 import com.ownlog.post.dto.TagPostsResponse;
+import com.ownlog.post.dto.TimeCapsuleItem;
 import com.ownlog.post.repository.PostRepository;
 import com.ownlog.tag.domain.Tag;
 import com.ownlog.tag.repository.TagRepository;
 import com.ownlog.topic.service.TopicService;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -34,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PostQueryService {
 
     private static final Duration POPULAR_PERIOD = Duration.ofDays(7);   // S-02 "최근 7일"
+    private static final Duration OPENED_CAPSULE_PERIOD = Duration.ofDays(7);   // TC-06 "최근 열린"
 
     private final PostRepository postRepository;
     private final TagRepository tagRepository;
@@ -55,6 +59,9 @@ public class PostQueryService {
 
         boolean isOwner = blogService.isOwner(blog, me);
         if (!isOwner && !post.isVisibleToPublic()) {
+            if (post.isSealed() && post.isPublicExceptSeal()) {
+                return PostDetailResponse.locked(post);                     // 잠금 카드만, 조회수는 세지 않아요 (TC-03)
+            }
             throw new BusinessException(ErrorCode.POST_NOT_FOUND);
         }
 
@@ -121,6 +128,21 @@ public class PostQueryService {
         }
         Page<PostCardRow> rows = postRepository.findByTag(tagName, pageable);
         return new TagPostsResponse(tag.get().getName(), PageResponse.from(rows.map(PostCard::from)));
+    }
+
+    /** API 12.1 곧 열리는 타임캡슐 (최대 20개). 주인에게는 비공개 캡슐도 보여줘요 */
+    @Transactional(readOnly = true)
+    public List<TimeCapsuleItem> getSealedCapsules(String username, LoginUser me) {
+        Blog blog = blogService.getActiveBlog(username);
+        return postRepository.findSealedCapsules(blog.getId(), blogService.isOwner(blog, me), PageRequest.of(0, 20))
+                .stream().map(TimeCapsuleItem::from).toList();
+    }
+
+    /** API 12.2 최근 7일 안에 열린 공개 타임캡슐 (최대 6개) */
+    @Transactional(readOnly = true)
+    public List<PostCard> getOpenedCapsules() {
+        return postRepository.findOpenedCapsules(Instant.now().minus(OPENED_CAPSULE_PERIOD), PageRequest.of(0, 6))
+                .stream().map(PostCard::from).toList();
     }
 
     /** API 6.4 블로그 글 목록. 주인에게는 비공개 글과 비공개 카테고리의 글도 보여줘요 */

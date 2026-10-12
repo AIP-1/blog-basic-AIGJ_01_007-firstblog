@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { useNow } from '../hooks/useNow'
 import { formatDate } from '../utils/format'
 
 /** 글 카드 (API 2.2 PostCard, S-03). 메인·블로그 홈·검색·태그·북마크 목록이 함께 써요 */
@@ -6,6 +7,9 @@ export default function PostCard({ post }) {
   const { author } = post
   const href = author.username ? `/@${author.username}/posts/${post.id}` : null
   const isHidden = post.visibility === 'PRIVATE' || post.categoryVisibility === 'PRIVATE'
+  // 타임캡슐: 봉인 중(주인에게만 보여요) 또는 열린 캡슐 (TC-06)
+  const now = useNow(60_000, Boolean(post.sealedAt))
+  const sealed = post.sealedAt && new Date(post.publishedAt).getTime() > now
 
   const body = (
     <article className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white transition hover:shadow-md">
@@ -25,11 +29,14 @@ export default function PostCard({ post }) {
               🔒 {post.visibility === 'PRIVATE' ? '비공개' : '비공개 카테고리'}
             </span>
           )}
+          {post.sealedAt && (
+            <span className="rounded bg-violet-50 px-2 py-0.5 text-violet-700">{sealed ? '🔒 봉인 중' : '⏳ 타임캡슐'}</span>
+          )}
         </div>
         <h2 className="line-clamp-2 font-semibold text-gray-900">{post.title}</h2>
         {post.summary && <p className="line-clamp-2 text-sm text-gray-600">{post.summary}</p>}
         <p className="mt-auto pt-2 text-xs text-gray-500">
-          {author.nickname} · {formatDate(post.publishedAt)} · ♥ {post.likeCount}
+          {author.nickname} · {sealed ? `${formatDate(post.publishedAt)} 개봉 예정` : formatDate(post.publishedAt)} · ♥ {post.likeCount}
         </p>
       </div>
     </article>

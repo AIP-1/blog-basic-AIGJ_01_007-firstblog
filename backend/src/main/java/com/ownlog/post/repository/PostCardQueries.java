@@ -3,16 +3,20 @@ package com.ownlog.post.repository;
 /** 글 카드 목록 쿼리의 공통 부분. 모든 목록 쿼리가 이 상수를 조합해서 써요. */
 public final class PostCardQueries {
 
-    /** 방문자가 볼 수 있는 글 (ERD 4.1). 이 조건을 고치면 모든 목록에 한꺼번에 적용돼요 */
+    /**
+     * 방문자가 볼 수 있는 글 (ERD 4.1). 이 조건을 고치면 모든 목록에 한꺼번에 적용돼요.
+     * 마지막 줄은 타임캡슐(TC-03): 개봉 시각(published_at)이 지나지 않은 봉인 글을 빼요.
+     */
     public static final String PUBLIC_CONDITION = """
              p.status = com.ownlog.post.domain.PostStatus.PUBLISHED
              and p.visibility = com.ownlog.global.common.Visibility.PUBLIC
              and c.visibility = com.ownlog.global.common.Visibility.PUBLIC
+             and p.publishedAt <= current_timestamp
             """;
 
     /** 카드에 필요한 컬럼만 (본문 content는 읽지 않아요). 북마크 목록도 이 목록을 재사용해요 */
     public static final String CARD_FIELDS = """
-                p.id, p.title, p.summary, p.thumbnailUrl, p.likeCount, p.publishedAt,
+                p.id, p.title, p.summary, p.thumbnailUrl, p.likeCount, p.publishedAt, p.sealedAt,
                 u.username, u.nickname, u.profileImageUrl, u.status,
                 t.id, t.slug, t.name, p.visibility, c.visibility
             """;

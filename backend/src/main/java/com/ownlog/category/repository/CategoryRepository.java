@@ -39,11 +39,12 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
             """, nativeQuery = true)
     List<CategoryPostCount> countPublishedPosts(Long blogId);
 
-    /** 카테고리별 "방문자가 볼 수 있는" 글 수 (공개 글만. 비공개 카테고리는 서비스에서 통째로 빼요) */
+    /** 카테고리별 "방문자가 볼 수 있는" 글 수 (공개 글만, 봉인된 타임캡슐 제외. 비공개 카테고리는 서비스에서 통째로 빼요) */
     @Query(value = """
             SELECT category_id AS "categoryId", COUNT(*) AS "postCount"
               FROM posts
              WHERE blog_id = :blogId AND status = 'PUBLISHED' AND visibility = 'PUBLIC'
+               AND published_at <= now()
              GROUP BY category_id
             """, nativeQuery = true)
     List<CategoryPostCount> countPublicPosts(Long blogId);

@@ -4,6 +4,7 @@ import com.ownlog.global.common.Visibility;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /** API 명세서 6.6, 6.7 요청 (발행 글은 제목과 본문이 필수예요) */
@@ -25,7 +26,9 @@ public record PostRequest(
 
         List<@Pattern(regexp = TAG_REGEX, message = TAG_MESSAGE) String> tags,
 
-        Visibility visibility   // null → PUBLIC
+        Visibility visibility,  // null → PUBLIC
+
+        OffsetDateTime openAt   // 타임캡슐 개봉 시각 (TC-01). null → 일반 글. 발행 글 수정(6.7)에서는 무시해요
 ) {
     /** 태그 규칙 (8장 입력 규칙). 임시저장 요청(DraftRequest)도 같은 규칙을 써요 */
     public static final String TAG_REGEX = "^\\s*[가-힣a-zA-Z0-9_-]{1,20}\\s*$";

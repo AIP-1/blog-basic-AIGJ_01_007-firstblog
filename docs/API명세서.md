@@ -20,6 +20,7 @@
 9. [좋아요 · 북마크](#9-좋아요--북마크)
 10. [신고](#10-신고)
 11. [이미지](#11-이미지)
+12. [타임캡슐](#12-타임캡슐) (기록 유니버스)
 
 ---
 
@@ -68,6 +69,8 @@
 | 10.1 | POST | `/api/posts/{postId}/reports` | 글 신고 | 🔒 | R-01, R-02 |
 | 10.2 | POST | `/api/comments/{commentId}/reports` | 댓글 신고 | 🔒 | R-02, R-04 |
 | 11.1 | POST | `/api/images` | 이미지 업로드 | 🔒 | P-03 |
+| 12.1 | GET | `/api/blogs/{username}/time-capsules` | 곧 열리는 타임캡슐 | 🔓 | TC-06 |
+| 12.2 | GET | `/api/time-capsules/opened` | 최근 열린 타임캡슐 | 🔓 | TC-06 |
 
 ---
 
@@ -175,11 +178,13 @@
   "author": { "username": "nayoung", "nickname": "나영", "profileImageUrl": null },
   "topic": { "id": 1, "slug": "it", "name": "IT·개발" },
   "visibility": "PUBLIC",
-  "categoryVisibility": "PUBLIC"
+  "categoryVisibility": "PUBLIC",
+  "sealedAt": null
 }
 ```
 - `thumbnailUrl`이 `null`이면 썸네일 없는 카드로 보여줘요(P-02).
 - `topic`은 `TopicItem`(2.4)이에요. `null`이면 "주제 없음"이라 카드에 토픽을 표시하지 않아요(T-04).
+- `sealedAt`은 타임캡슐을 봉인한 시각이에요(일반 글은 `null`). 열린 캡슐 카드에 "⏳ 타임캡슐", 주인이 보는 봉인 중 캡슐에 "🔒 봉인 중" 배지를 붙여요 (TC-06). 타임캡슐의 `publishedAt`은 개봉 시각이에요.
 - `visibility`와 `categoryVisibility`는 **블로그 주인이 자기 목록을 볼 때** 🔒 표시를 붙이는 데 써요. 방문자에게는 항상 둘 다 `PUBLIC`인 글만 와요.
 
 ### 2.3 `CategoryItem`
@@ -239,6 +244,8 @@
 | **글 · 임시저장** | | | |
 | `POST_NOT_FOUND` | 404 | 존재하지 않는 글이에요. | 글 조회·수정·삭제, 볼 수 없는 글 |
 | `DRAFT_NOT_FOUND` | 404 | 존재하지 않는 임시저장 글이에요. | 7.2 ~ 7.6 |
+| `INVALID_OPEN_AT` | 400 | 열리는 시각은 1분 뒤부터 10년 안으로 정해 주세요. | 6.6, 7.6 (`openAt`) |
+| `TIME_CAPSULE_SEALED` | 400 | 봉인된 타임캡슐은 열리기 전까지 수정할 수 없어요. | 6.7 |
 | **댓글** | | | |
 | `COMMENT_NOT_FOUND` | 404 | 존재하지 않는 댓글이에요. | 8.3, 8.4, 10.2 |
 | `INVALID_PARENT_COMMENT` | 400 | 이 댓글에는 답글을 달 수 없어요. | 8.2 (답글의 답글, 다른 글의 댓글, 삭제된 댓글) |
@@ -1141,3 +1148,53 @@
 > ⚠️ **배포할 때 주의:** Nginx의 기본 업로드 크기 제한(`client_max_body_size`)은 **1MB**예요. 6MB 정도로 늘려 두지 않으면 1MB가 넘는 이미지가 Spring까지 오지도 못하고 Nginx에서 413 에러가 나요. Spring의 `spring.servlet.multipart.max-file-size`도 5MB로 맞춰요.
 >
 > 업로드했지만 글에 쓰이지 않은 이미지는 MVP에서 정리하지 않아요(ERD 6장, 2차).
+
+---
+
+## 12. 타임캡슐
+
+> 독창 기능 "기록 유니버스"의 시간 축이에요 (요구사항 3.10, 설계 `docs/기록유니버스-설계.md` 3장).
+> 타임캡슐은 **새 테이블 없이** 글(`posts`)에 `sealed_at`(봉인 시각)을 두고, `published_at`에 개봉 시각을 넣어요. 그래서 공개 조건(ERD 4.1) 한 줄로 모든 목록에서 봉인 글이 빠져요.
+
+### 기존 API 변경
+| API | 변경 |
+|---|---|
+| 6.6 글 바로 발행, 7.6 임시저장 글 발행 | 요청에 `openAt`(선택, ISO-8601) 추가. 있으면 타임캡슐로 발행해요. 지금부터 1분 뒤 ~ 10년 뒤가 아니면 `INVALID_OPEN_AT` |
+| 6.7 발행 글 수정 | 봉인 중이면 `TIME_CAPSULE_SEALED`. `openAt`은 무시해요 (개봉 시각은 바꿀 수 없어요) |
+| 6.5 글 상세 | 응답에 `timeCapsule` 추가 (일반 글은 `null`). **방문자가 봉인 중인 공개 캡슐을 열면** 200으로 잠금 응답을 줘요: `content`, `thumbnailUrl`, `topic`은 `null`, `tags`는 `[]`, 조회수는 세지 않아요. 비공개 캡슐은 지금처럼 404 |
+| 8.x, 9.x, 10.1 | 봉인 중인 글에 대한 요청은 404 (볼 수 없는 글과 같아요) |
+
+**6.6 요청 예시**
+```json
+{ "title": "1년 뒤의 나에게", "content": "...", "categoryId": 3, "openAt": "2027-10-12T09:00:00+09:00" }
+```
+
+**6.5 잠금 응답 예시 (방문자, 봉인 중)**
+```json
+{
+  "id": 42, "title": "1년 뒤의 나에게", "content": null, "thumbnailUrl": null, "topic": null, "tags": [],
+  "author": { "username": "nayoung", "nickname": "나영", "profileImageUrl": null },
+  "viewCount": 0, "likeCount": 0, "isOwner": false,
+  "publishedAt": "2027-10-12T09:00:00+09:00",
+  "timeCapsule": { "sealedAt": "2026-10-12T14:00:00+09:00", "openAt": "2027-10-12T09:00:00+09:00", "locked": true }
+}
+```
+- 작성자 본인이나 개봉된 뒤에는 `locked: false`이고 나머지 값은 일반 글과 같아요.
+
+### 12.1 곧 열리는 타임캡슐
+`GET /api/blogs/{username}/time-capsules` 🔓 · TC-06
+
+봉인 중인 캡슐을 **개봉 빠른 순**으로 최대 20개 줘요. 방문자에게는 공개 글·공개 카테고리의 캡슐만, 주인에게는 비공개 캡슐도 보여줘요.
+
+**응답 `200 OK`**
+```json
+[ { "id": 42, "title": "1년 뒤의 나에게", "sealedAt": "2026-10-12T14:00:00+09:00", "openAt": "2027-10-12T09:00:00+09:00" } ]
+```
+
+**에러:** `USER_NOT_FOUND`
+
+### 12.2 최근 열린 타임캡슐
+`GET /api/time-capsules/opened` 🔓 · TC-06
+
+최근 7일 안에 열린 공개 캡슐을 **최근 개봉 순**으로 최대 6개 줘요. 응답은 `PostCard`(2.2) 배열이에요 (`sealedAt`이 채워져 있어요).
+
