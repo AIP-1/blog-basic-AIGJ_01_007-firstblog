@@ -10,6 +10,7 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 ## [Unreleased]
 
 ### 추가
+- 베타 테스터용 공용 계정 스크립트(`scripts/tester-account.mjs`): 안내 글, 연결된 글, 받은 타임캡슐 2개
 - 문서: 포트폴리오 초안(`docs/포트폴리오.md`), 기술 면접 예상 질문 50(`docs/면접-예상질문.md`)
 
 ### 변경
