@@ -1,6 +1,6 @@
 # 화면 점검 (E2E)
 
-헤드리스 Chrome으로 실제 화면을 눌러 보며 기능을 확인해요. **119개 항목**, 한 번 도는 데 약 9분 걸려요.
+헤드리스 Chrome으로 실제 화면을 눌러 보며 기능을 확인해요. **125개 항목**, 한 번 도는 데 약 9분 걸려요.
 Playwright 같은 추가 설치 없이 Chrome DevTools Protocol(`cdp.mjs`)로 동작해요. Node.js 24, Chrome이 필요해요.
 
 | 파일 | 확인하는 것 |
@@ -17,6 +17,7 @@ Playwright 같은 추가 설치 없이 Chrome DevTools Protocol(`cdp.mjs`)로 �
 | `check-expired` | 만료·잘못된 토큰으로 접속해도 공개 화면에서 튕기지 않음 |
 | `check-extra` | 🎞️ 타임랩스, 🌌 서비스 전체 우주, 🔍 링크 미리보기, 💌 받는 사람 캡슐 |
 | `check-guide` | 📖 기능 가이드: 메인·푸터에서 들어가기, 섹션, 바로 해 보기 링크, 휴대폰 |
+| `check-social` | 🔐 소셜 로그인: 키가 있는 서비스만 버튼, 동의 화면 주소(state·돌아올 주소), 실패 안내, 위조 코드, 휴대폰 (가짜 키, 외부 요청 없음) |
 | `check-audit` | 전체 점검에서 고친 문제: 인코딩 주소 인증 우회, 외부 주소 리다이렉트, 글쓰기 화면 상태, 임시저장 덮어쓰기, 댓글 두 번 등록 |
 
 ## 발표 리허설
@@ -49,7 +50,10 @@ set -a; . ./.env; set +a
 docker run -d --name ownlog-e2e -p 8301:8080 \
   -e DB_ADDRESS=host.docker.internal -e DB_PORT=5432 -e DB_NAME=${DB_NAME:-ownlog} \
   -e DB_USERNAME=${DB_USERNAME:-ownlog} -e DB_PASSWORD="$DB_PASSWORD" -e DB_SCHEMA=e2e \
-  -e JWT_SECRET="$(openssl rand -base64 48)" ownlog:e2e
+  -e JWT_SECRET="$(openssl rand -base64 48)" \
+  -e OAUTH_KAKAO_CLIENT_ID=e2e-kakao -e OAUTH_KAKAO_CLIENT_SECRET=e2e-secret \
+  -e OAUTH_GITHUB_CLIENT_ID=e2e-github -e OAUTH_GITHUB_CLIENT_SECRET=e2e-secret \
+  ownlog:e2e   # 소셜 로그인 키는 가짜예요 (check-social이 버튼·동의 화면 주소만 확인, 외부로 요청하지 않아요)
 
 BASE=http://localhost:8301 E2E_DB_SCHEMA=e2e node e2e/run-all.mjs
 
