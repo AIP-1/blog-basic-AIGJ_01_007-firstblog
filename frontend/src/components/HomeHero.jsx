@@ -49,6 +49,9 @@ export default function HomeHero() {
           className="rounded-full px-5 py-2 text-sm font-semibold text-white ring-1 ring-white/40 hover:bg-white/10">
           ✍️ {user ? '오늘의 기록 남기기' : '나만의 블로그 시작하기'}
         </Link>
+        <Link to="/guide" className="rounded-full px-5 py-2 text-sm font-semibold text-indigo-100 hover:bg-white/10 hover:text-white">
+          📖 기능 가이드
+        </Link>
       </div>
 
       {stats && (

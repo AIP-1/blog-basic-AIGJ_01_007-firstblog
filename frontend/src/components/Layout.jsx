@@ -126,6 +126,7 @@ export default function Layout() {
             <span>기록이 시간과 연결로 자라는 블로그</span>
           </span>
           <span className="flex gap-4">
+            <Link to="/guide" className="hover:text-indigo-600">📖 기능 가이드</Link>
             <Link to="/universe" className="hover:text-indigo-600">🌌 OwnLog 우주</Link>
             <span>© 2026 OwnLog</span>
           </span>
