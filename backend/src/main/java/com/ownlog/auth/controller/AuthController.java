@@ -46,13 +46,13 @@ public class AuthController {
         return authService.checkUsername(username);
     }
 
-    /** API 4.8 켜져 있는 소셜 로그인 (키를 등록한 서비스만, 버튼 순서대로) */
+    /** API 4.9 켜져 있는 소셜 로그인 (키를 등록한 서비스만, 버튼 순서대로) */
     @GetMapping("/oauth/providers")
     public Map<String, List<String>> oauthProviders() {
         return Map.of("providers", oauthClientRegistrations.enabledProviderIds());
     }
 
-    /** API 4.9 소셜 로그인 1회용 코드 → 토큰 */
+    /** API 4.10 소셜 로그인 1회용 코드 → 토큰 */
     @PostMapping("/oauth/exchange")
     public LoginResponse exchange(@RequestBody Map<String, String> body) {
         return authService.exchangeOAuthCode(body.get("code"));

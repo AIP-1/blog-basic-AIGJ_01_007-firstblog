@@ -396,6 +396,24 @@ INSERT INTO topics (slug, name, display_order) VALUES
 
 ---
 
+### 3.10 `user_social_accounts` (소셜 계정 연결, V6)
+
+소셜 로그인(U-09)으로 들어온 계정과 OwnLog 회원을 이어요. 회원 한 명이 여러 서비스를 연결할 수 있어요.
+
+| 컬럼 | 타입 | 제약 | 설명 |
+|---|---|---|---|
+| `id` | BIGSERIAL | PK | |
+| `user_id` | BIGINT | NOT NULL, FK → users | 연결된 회원 |
+| `provider` | VARCHAR(20) | NOT NULL | `KAKAO` / `NAVER` / `GOOGLE` / `GITHUB` |
+| `provider_user_id` | VARCHAR(100) | NOT NULL | 그 서비스의 회원 번호 (이메일은 바뀔 수 있어서 쓰지 않아요) |
+| `created_at`, `updated_at` | TIMESTAMPTZ | NOT NULL | |
+
+- `UNIQUE (provider, provider_user_id)`: 한 소셜 계정은 회원 한 명에게만 연결돼요.
+- 같은 V6에서 `users.password_set BOOLEAN NOT NULL DEFAULT TRUE`를 추가했어요. 소셜로만 가입한 회원은 `FALSE`이고, 이때 `users.password`에는 아무도 모르는 임의 값의 해시가 들어 있어요.
+- 이메일을 주지 않는 서비스로 가입하면 `users.email`은 `{provider}_{번호}@social.ownlog.invalid`예요 (`.invalid`는 실제로 존재할 수 없는 도메인).
+- 탈퇴(U-06)하면 이 행을 지워요.
+- **무중단 배포 규칙**: 추가만 하는 마이그레이션이라, 배포하는 동안 함께 떠 있는 예전 버전이 깨지지 않아요 (`docs/guide/배포와-CI-CD.md` 4.4).
+
 ## 4. 인덱스
 
 | 테이블 | 인덱스 | 쓰는 곳 |

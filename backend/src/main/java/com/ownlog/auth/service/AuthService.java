@@ -86,7 +86,7 @@ public class AuthService {
         return issueToken(found.get());
     }
 
-    /** API 4.9 소셜 로그인 교환: 소셜 로그인이 끝나고 받은 1회용 코드 → 이메일 로그인과 같은 응답 */
+    /** API 4.10 소셜 로그인 교환: 소셜 로그인이 끝나고 받은 1회용 코드 → 이메일 로그인과 같은 응답 */
     @Transactional(readOnly = true)
     public LoginResponse exchangeOAuthCode(String code) {
         User user = oauthLoginCodeStore.consume(code)
