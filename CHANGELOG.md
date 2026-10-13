@@ -9,6 +9,16 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-13
+
+### 추가
+- 📖 기능 가이드 화면 `/guide`: 시작하기(가입·테스터 계정), 기록 유니버스 5가지, 기본 기능, 자주 묻는 것. 기능마다 "바로 해 보기" 링크. 메인 첫 화면과 푸터에서 들어가요
+- 베타 테스터용 공용 계정 스크립트(`scripts/tester-account.mjs`): 안내 글, 연결된 글, 받은 타임캡슐 2개
+- 문서: 포트폴리오 초안(`docs/포트폴리오.md`), 기술 면접 예상 질문 50(`docs/면접-예상질문.md`)
+
+### 변경
+- 트러블슈팅 7번: 타임캡슐 때 고친 쿼리 수를 정확하게 정정 (JPQL 6개 수정 없음, 네이티브 SQL 1곳 수정)
+
 ## [1.0.1] - 2026-10-13
 
 ### 수정
@@ -95,7 +105,8 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 - 기획(요구사항 명세), ERD, API 명세서 (2026-10-01 ~ 10-06)
 - 백엔드 REST API 38개 (Spring Boot 4.1, JWT, Flyway), 통합·동시성·롤백 테스트 121개
 
-[Unreleased]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.0.1...develop
+[Unreleased]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.1.0...develop
+[1.1.0]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v0.6.0...v1.0.0
 [0.6.0]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v0.5.0...v0.6.0

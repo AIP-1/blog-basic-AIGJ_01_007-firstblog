@@ -8,6 +8,7 @@ import CategorySettingsPage from './pages/CategorySettingsPage'
 import DraftsPage from './pages/DraftsPage'
 import LoginPage from './pages/LoginPage'
 import MainPage from './pages/MainPage'
+import GuidePage from './pages/GuidePage'
 import NotFoundPage from './pages/NotFoundPage'
 import ReceivedCapsulesPage from './pages/ReceivedCapsulesPage'
 import SearchPage from './pages/SearchPage'
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/guide" element={<GuidePage />} />
         <Route path="/tags/:tagName" element={<TagPage />} />
         <Route path="/universe" element={<Suspense fallback={loadingFallback}><GlobalUniversePage /></Suspense>} />
         {/* /@아이디: React Router는 "/@:username"처럼 글자와 변수를 섞을 수 없어서 /:handle로 받고 화면에서 @를 확인해요 */}

@@ -55,7 +55,7 @@
 │           └── db/migration/     V1 테이블 생성, V2 타임캡슐, V3 글 연결, V4 받는 사람 캡슐, V5 요약 정리 (Flyway)
 ├── frontend/                 React SPA
 │   └── src/                  api, auth, components, hooks, pages, utils
-├── e2e/                      화면 점검 113개 (헤드리스 Chrome)
+├── e2e/                      화면 점검 119개 (헤드리스 Chrome)
 ├── scripts/seed-demo.mjs     시연용 데이터
 ├── deploy/deploy.sh          서버에서 컨테이너를 실행하는 스크립트
 ├── .github/workflows/        자동 배포 (GitHub Actions)
@@ -74,6 +74,7 @@
 - [발표 리허설](docs/발표-리허설.md)
 - [전체 코드 점검 보고서](docs/점검-보고서.md)
 - [트러블슈팅 기록](docs/트러블슈팅.md): 실제로 겪은 문제 12가지의 원인 분석과 해결
+- [포트폴리오 초안](docs/포트폴리오.md) · [기술 면접 예상 질문 50](docs/면접-예상질문.md)
 
 ## 로컬에서 실행하기
 
@@ -109,7 +110,7 @@ BASE=https://ownlog.java21.net node scripts/seed-demo.mjs   # 서버 (API로만 
 ```bash
 cd backend && ./gradlew test          # 백엔드 169개: 통합·동시성·롤백·권한·보안 (Docker 필요)
 cd frontend && npm run lint && npm run build
-node e2e/run-all.mjs                  # 화면 점검 113개 (Chrome 필요, 자세한 내용은 e2e/README.md)
+node e2e/run-all.mjs                  # 화면 점검 119개 (Chrome 필요, 자세한 내용은 e2e/README.md)
 ```
 
 화면 점검은 실제로 가입·글쓰기·탈퇴를 해서 DB에 테스트 데이터가 남아요. 시연 DB를 깨끗하게 두려면 [e2e/README.md](e2e/README.md)의 "별도 스키마에서 돌리기"를 써요.
