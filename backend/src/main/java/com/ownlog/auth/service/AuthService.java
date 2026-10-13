@@ -6,6 +6,7 @@ import com.ownlog.auth.dto.SignupRequest;
 import com.ownlog.auth.dto.SignupResponse;
 import com.ownlog.auth.dto.UsernameCheckResponse;
 import com.ownlog.auth.dto.UsernameCheckResponse.Reason;
+import com.ownlog.auth.oauth.OAuthLoginCodeStore;
 import com.ownlog.blog.domain.Blog;
 import com.ownlog.blog.repository.BlogRepository;
 import com.ownlog.category.domain.Category;
@@ -39,6 +40,7 @@ public class AuthService {
     private final CategoryRepository categoryRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
+    private final OAuthLoginCodeStore oauthLoginCodeStore;
 
     /**
      * 회원가입 (U-01, U-02). 회원 → 블로그 → "미분류"를 한 트랜잭션으로 만들어요.
@@ -81,7 +83,20 @@ public class AuthService {
             throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
         }
 
-        User user = found.get();
+        return issueToken(found.get());
+    }
+
+    /** API 4.10 소셜 로그인 교환: 소셜 로그인이 끝나고 받은 1회용 코드 → 이메일 로그인과 같은 응답 */
+    @Transactional(readOnly = true)
+    public LoginResponse exchangeOAuthCode(String code) {
+        User user = oauthLoginCodeStore.consume(code)
+                .flatMap(userRepository::findById)
+                .filter(User::isActive)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_OAUTH_CODE));
+        return issueToken(user);
+    }
+
+    private LoginResponse issueToken(User user) {
         Blog blog = blogRepository.findFirstByUserIdOrderByIdAsc(user.getId())
                 .orElseThrow(() -> new IllegalStateException("블로그가 없는 회원: " + user.getId()));
         return LoginResponse.of(tokenProvider.createAccessToken(user.getId()),

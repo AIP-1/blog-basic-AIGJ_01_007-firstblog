@@ -56,6 +56,10 @@ public class User extends BaseTimeEntity {
 
     private Instant deletedAt;
 
+    /** 비밀번호를 직접 정했는지. 소셜 로그인으로만 가입하면 false예요 (V6) */
+    @Column(nullable = false)
+    private boolean passwordSet;
+
     /** 회원가입. 이메일은 소문자로 저장해요 (U-01). 비밀번호는 이미 BCrypt로 해시된 값을 받아요. */
     public static User create(String email, String encodedPassword, String username, String nickname) {
         User user = new User();
@@ -65,6 +69,17 @@ public class User extends BaseTimeEntity {
         user.nickname = nickname;
         user.role = UserRole.USER;
         user.status = UserStatus.ACTIVE;
+        user.passwordSet = true;
+        return user;
+    }
+
+    /**
+     * 소셜 로그인으로 가입. 비밀번호 칸은 비울 수 없어서 아무도 모르는 임의 값의 해시를 넣고,
+     * passwordSet=false로 표시해요 → 이메일 로그인은 안 되고, 설정에서 비밀번호를 정하면 그때부터 돼요.
+     */
+    public static User createSocial(String email, String randomEncodedPassword, String username, String nickname) {
+        User user = create(email, randomEncodedPassword, username, nickname);
+        user.passwordSet = false;
         return user;
     }
 
@@ -80,6 +95,7 @@ public class User extends BaseTimeEntity {
 
     public void changePassword(String encodedPassword) {
         this.password = encodedPassword;
+        this.passwordSet = true;
     }
 
     /** 탈퇴 (U-06): 개인정보를 지우고 아이디만 남겨요. */

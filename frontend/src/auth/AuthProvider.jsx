@@ -46,6 +46,15 @@ export default function AuthProvider({ children }) {
     [loadMe],
   )
 
+  /** 소셜 로그인 (U-09): 코드 교환으로 받은 토큰을 저장하고 내 정보를 불러와요 */
+  const loginWithToken = useCallback(
+    async (accessToken) => {
+      tokenStorage.set(accessToken)
+      return loadMe()
+    },
+    [loadMe],
+  )
+
   /**
    * 로그아웃은 토큰을 지우는 것뿐이에요 (U-03, 서버 API 없음).
    * React Router는 화면 이동을 startTransition(낮은 우선순위)으로 처리해요. user만 먼저 null이 되면
@@ -58,7 +67,7 @@ export default function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, reloadMe: loadMe }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithToken, logout, reloadMe: loadMe }}>
       {children}
     </AuthContext.Provider>
   )
