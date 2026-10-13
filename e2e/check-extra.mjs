@@ -31,6 +31,20 @@ try {
   check('1. 타임랩스 ▶ → 별이 0개 근처에서 점점 늘고, 끝나면 "오늘 · 전체"', early < mid && mid <= total && end === total && early < total,
     `처음 ${early} → 중간 ${mid} → 끝 ${end} / 전체 ${total}`)
 
+  // 1-2. 글이 몇 초 안에 몰려 있어도 별이 하나씩 태어남 (예전에는 첫 프레임에 다 나타났어요: 트러블슈팅 13번)
+  await page.goto(`${BASE}/@unidemo/universe`)   // seed-universe는 날짜를 옮기지 않아서 모든 글이 몇 초 안에 쓰였어요
+  await page.waitFor(`document.querySelector('canvas')?.dataset.settled === 'true'`, 15000)
+  const clusteredTotal = await starCount()
+  await page.clickButton('▶ 타임랩스')
+  await sleep(1200)
+  const clusteredEarly = await starCount()
+  await sleep(2500)
+  const clusteredMid = await starCount()
+  check('1-2. 글이 몇 초 안에 몰린 우주도 별이 하나씩 (1.2초에 일부만, 이후 늘어남)',
+    clusteredEarly > 0 && clusteredEarly < clusteredTotal / 2 && clusteredMid > clusteredEarly,
+    `1.2초 ${clusteredEarly} → 3.7초 ${clusteredMid} / 전체 ${clusteredTotal}`)
+  await page.waitFor(`document.querySelector('[data-timelapse-status]').innerText.startsWith('오늘')`, 12000)
+
   // 2. 서비스 전체 우주 (헤더 "🌌 우주")
   const uni = await (await fetch(`${API}/universe`)).json()
   await page.eval(`[...document.querySelectorAll('header a')].find(a => a.getAttribute('href') === '/universe').click()`)
