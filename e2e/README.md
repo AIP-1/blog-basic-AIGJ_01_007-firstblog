@@ -49,7 +49,10 @@ set -a; . ./.env; set +a
 docker run -d --name ownlog-e2e -p 8301:8080 \
   -e DB_ADDRESS=host.docker.internal -e DB_PORT=5432 -e DB_NAME=${DB_NAME:-ownlog} \
   -e DB_USERNAME=${DB_USERNAME:-ownlog} -e DB_PASSWORD="$DB_PASSWORD" -e DB_SCHEMA=e2e \
-  -e JWT_SECRET="$(openssl rand -base64 48)" ownlog:e2e
+  -e JWT_SECRET="$(openssl rand -base64 48)" \
+  -e OAUTH_KAKAO_CLIENT_ID=e2e-kakao -e OAUTH_KAKAO_CLIENT_SECRET=e2e-secret \
+  -e OAUTH_GITHUB_CLIENT_ID=e2e-github -e OAUTH_GITHUB_CLIENT_SECRET=e2e-secret \
+  ownlog:e2e   # 소셜 로그인 키는 가짜예요 (check-social이 버튼·동의 화면 주소만 확인, 외부로 요청하지 않아요)
 
 BASE=http://localhost:8301 E2E_DB_SCHEMA=e2e node e2e/run-all.mjs
 

@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 import { DIR } from './common.mjs'
 
-const CHECKS = ['auth', 'main', 'read', 'write', 'settings', 'capsule', 'links', 'universe', 'activity', 'expired', 'extra', 'audit', 'guide']
+const CHECKS = ['auth', 'main', 'read', 'write', 'settings', 'capsule', 'links', 'universe', 'activity', 'expired', 'extra', 'audit', 'guide', 'social']
 const only = process.argv.slice(2)   // 예: node e2e/run-all.mjs links extra
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
