@@ -13,8 +13,10 @@ if (setup.status !== 0) process.exit(1)
 
 let passed = 0, failed = 0
 for (const name of CHECKS.filter((c) => !only.length || only.includes(c))) {
-  const res = spawnSync(process.execPath, [join(DIR, `check-${name}.mjs`)], { encoding: 'utf8' })
-  const out = (res.stdout ?? '') + (res.stderr ?? '')
+  // 점검 하나가 멈춰도 전체가 멈추지 않게 4분 제한 (넘으면 실패로 세요)
+  const res = spawnSync(process.execPath, [join(DIR, `check-${name}.mjs`)], { encoding: 'utf8', timeout: 240_000, killSignal: 'SIGKILL' })
+  let out = (res.stdout ?? '') + (res.stderr ?? '')
+  if (res.error?.code === 'ETIMEDOUT') out += `\n❌ ${name}: 4분 안에 끝나지 않아 중단했어요`
   const ok = (out.match(/✅/g) ?? []).length
   const bad = (out.match(/❌/g) ?? []).length
   passed += ok

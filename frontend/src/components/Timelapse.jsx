@@ -22,8 +22,8 @@ export default function Timelapse({ times, onChange }) {
   const notify = useEffectEvent((until) => onChange(until))
 
   useEffect(() => {
-    notify(count == null ? null : count === 0 ? Number.NEGATIVE_INFINITY : sorted[count - 1])
-  }, [count, sorted])
+    notify(count == null ? null : count <= 0 ? Number.NEGATIVE_INFINITY : sorted[Math.min(count, total) - 1])
+  }, [count, sorted, total])
 
   useEffect(() => {
     if (!playing) return
@@ -31,7 +31,9 @@ export default function Timelapse({ times, onChange }) {
     const startedAt = performance.now()
     let raf
     const step = (now) => {
-      const progress = Math.min(1, (now - startedAt) / duration)
+      // requestAnimationFrame의 now는 "그 프레임이 시작된 시각"이라 startedAt보다 조금 이를 수 있어요.
+      // 그대로 쓰면 진행률이 음수 → 별 -1개 → 날짜 계산 실패로 화면이 깨져서 0~1로 묶어요
+      const progress = Math.min(1, Math.max(0, (now - startedAt) / duration))
       setCount(Math.floor(progress * total))   // 0개(빈 우주)에서 시작해 하나씩 늘어요
       if (progress < 1) raf = requestAnimationFrame(step)
       else {
@@ -44,9 +46,9 @@ export default function Timelapse({ times, onChange }) {
   }, [playing, total])
 
   // 같은 시각에 쓴 별은 함께 보여서, 실제로 보이는 수는 그 시각까지 쓴 별 수예요
-  const until = count == null || count === 0 ? null : sorted[count - 1]
-  const shown = count == null ? total : count === 0 ? 0 : sorted.filter((t) => t <= until).length
-  const label = count == null ? '오늘' : count === 0 ? '시작' : formatDate(new Date(until).toISOString())
+  const until = count == null || count <= 0 ? null : sorted[Math.min(count, total) - 1]
+  const shown = count == null ? total : until == null ? 0 : sorted.filter((t) => t <= until).length
+  const label = count == null ? '오늘' : until == null ? '시작' : formatDate(new Date(until).toISOString())
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm">
