@@ -1,7 +1,11 @@
 import { api } from './client'
 
-/** API 4.9 켜져 있는 소셜 로그인 (키를 등록한 서비스만) */
-export const getOAuthProviders = () => api.get('/auth/oauth/providers').then((r) => r.data.providers)
+/**
+ * API 4.9 켜져 있는 소셜 로그인 (키를 등록한 서비스만).
+ * 버튼을 그릴지 정하는 보조 요청이라, 실패해도(만료 토큰의 401 등) 로그인 화면으로 보내지 않고 버튼만 숨겨요
+ */
+export const getOAuthProviders = () =>
+  api.get('/auth/oauth/providers', { skipAuthRedirect: true }).then((r) => r.data.providers)
 
 /** API 4.10 소셜 로그인이 끝나고 받은 1회용 코드 → 로그인 응답(토큰) */
 export const exchangeOAuthCode = (code) => api.post('/auth/oauth/exchange', { code }).then((r) => r.data)

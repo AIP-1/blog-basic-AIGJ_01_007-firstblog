@@ -26,6 +26,10 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
   - API 14.1·14.3: 선 종류 `TAG` → `RELATED`, `weight`가 정수(겹친 태그 수) → 0~1 소수, `keywords` 추가. 화면만 쓰는 API라 함께 바꿨어요
 - `GET /api/users/me`에 `passwordSet` 추가, 탈퇴 요청은 `password` 또는 `username`
 - CI가 `refactor/**`, `test/**` 브랜치도 테스트해요
+- 화면 점검 125개 (`check-social` 추가)
+
+### 수정
+- 화면 점검 `check-expired`가 점검 대상(`BASE`) 대신 개발 서버(5173) 주소를 쓰던 문제
 
 ## [1.1.0] - 2026-10-13
 
