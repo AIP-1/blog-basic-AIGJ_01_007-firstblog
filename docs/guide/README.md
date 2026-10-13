@@ -17,6 +17,7 @@ OwnLog를 만들면서 쓴 기술과 작업 방식을 **개념부터** 설명하
 | [git-브랜치와-버전관리.md](git-브랜치와-버전관리.md) | Git 기초, Git Flow, 이 저장소의 브랜치와 실제 이력, 커밋 메시지·SemVer·CHANGELOG·태그, 작업 레시피 | ✅ |
 | [파일-업로드.md](파일-업로드.md) | 이미지 첨부의 원리(multipart, 매직 넘버, UUID, 경로 조작)와 이 프로젝트의 업로드·제공·삭제 흐름, 한계 | ✅ |
 | [github-organization과-readme.md](github-organization과-readme.md) | GitHub Organization·권한·Secrets·Actions·브랜치 보호, 좋은 README와 이 프로젝트 README 구조 | ✅ |
+| [CI-테스트-자동화.md](CI-테스트-자동화.md) | `ci.yml` 한 줄씩 분석: 언제 도는지(브랜치·paths-ignore·PR), 테스트 193개와 Testcontainers, 린트·빌드, CI가 확인하지 않는 것, 결과 보는 법, 개선 제안 | ✅ |
 | [배포와-CI-CD.md](배포와-CI-CD.md) | CI/CD 개념, `ci.yml`·`deploy.yml` 한 줄씩, 블루-그린 무중단 배포(프록시·graceful shutdown·마이그레이션 규칙)와 실측 결과 | ✅ |
 | [소셜-로그인.md](소셜-로그인.md) | OAuth2 개념, 카카오·네이버·구글·깃허브 흐름, 보안 결정(자동 연결 안 함, 1회용 코드), **키 발급 방법** | ✅ |
 | [기록-우주-연관도.md](기록-우주-연관도.md) | "정말 관련 있는 글"만 잇는 방법: TF-IDF·IDF·코사인 유사도, 기준값 고르기 | ✅ |

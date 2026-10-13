@@ -62,7 +62,7 @@
 ├── Dockerfile                화면 + API를 이미지 하나로 빌드
 ├── docker-compose.yml        로컬 개발용 PostgreSQL
 ├── 요구사항.md               요구사항 명세서
-└── docs/                     ERD.md, API명세서.md, 기록유니버스-설계.md, guide/(개념 가이드 7종)
+└── docs/                     ERD.md, API명세서.md, 기록유니버스-설계.md, guide/(개념 가이드 8종)
 ```
 
 ## 문서
@@ -76,7 +76,7 @@
 - [트러블슈팅 기록](docs/트러블슈팅.md): 실제로 겪은 문제 19가지의 원인 분석과 해결
 - **[개념 가이드](docs/guide/README.md)**: 처음 보는 사람을 위해 개념부터 설명해요
   - [개발환경](docs/guide/개발환경.md) · [Git 브랜치와 버전관리](docs/guide/git-브랜치와-버전관리.md) · [GitHub Organization과 README](docs/guide/github-organization과-readme.md)
-  - [배포와 CI/CD·무중단 배포](docs/guide/배포와-CI-CD.md) · [파일 업로드](docs/guide/파일-업로드.md) · [소셜 로그인](docs/guide/소셜-로그인.md) · [기록 우주 연관도](docs/guide/기록-우주-연관도.md)
+  - [CI 테스트 자동화(ci.yml)](docs/guide/CI-테스트-자동화.md) · [배포와 CI/CD·무중단 배포](docs/guide/배포와-CI-CD.md) · [파일 업로드](docs/guide/파일-업로드.md) · [소셜 로그인](docs/guide/소셜-로그인.md) · [기록 우주 연관도](docs/guide/기록-우주-연관도.md)
 - [포트폴리오 초안](docs/포트폴리오.md) · [기술 면접 예상 질문 50](docs/면접-예상질문.md)
 
 ## 로컬에서 실행하기
