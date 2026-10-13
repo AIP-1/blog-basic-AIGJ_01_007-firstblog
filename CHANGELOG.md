@@ -9,6 +9,9 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+### 추가
+- 문서: `ci.yml` 분석 가이드 `docs/guide/CI-테스트-자동화.md`
+
 ## [1.2.0] - 2026-10-13
 
 ### 추가
