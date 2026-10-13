@@ -2,8 +2,11 @@ package com.ownlog.universe.dto;
 
 import java.time.Instant;
 
-/** 그래프 별 쿼리 결과 한 줄 (select new용). username·nickname은 서비스 전체 우주에서 블로그(은하)를 나눌 때 써요 */
-public record GraphNodeRow(Long id, String title, String topicSlug, int likeCount, Instant publishedAt, Instant sealedAt,
+/**
+ * 그래프 별 쿼리 결과 한 줄 (select new용). username·nickname은 서비스 전체 우주에서 블로그(은하)를 나눌 때 써요.
+ * summary는 관련 있는 글 계산(GR-02)에만 쓰고 응답에는 넣지 않아요.
+ */
+public record GraphNodeRow(Long id, String title, String summary, String topicSlug, int likeCount, Instant publishedAt, Instant sealedAt,
                            String username, String nickname) {
 
     /** 아직 열리지 않은 타임캡슐 */

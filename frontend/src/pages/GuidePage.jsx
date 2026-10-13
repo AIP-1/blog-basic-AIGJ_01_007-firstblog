@@ -75,7 +75,7 @@ export default function GuidePage() {
             steps={['글쓰기 본문에서 [[ 를 입력하거나 "🔗 글 연결" 버튼을 눌러요', '제목을 입력해서 내 글이나 다른 사람의 공개 글을 골라요 (↑↓ Enter)', '읽을 때 🔗 링크에 마우스를 올리면 미리보기 카드가 떠요. 비공개 글은 제목도 보이지 않아요']}
             tryLink={writeLink} tryLabel="글 연결해 보기" />
           <Feature accent icon="🌌" title="기록 우주와 타임랩스"
-            summary="글은 별, 연결과 같은 태그는 선이에요. 내 기록이 하나의 우주처럼 보여요."
+            summary="글은 별, [[링크]]와 관련 있는 글은 선이에요. 내 기록이 하나의 우주처럼 보여요."
             steps={['블로그 홈의 "🌌 기록 우주" 또는 헤더의 "🌌 우주"(모든 블로그)를 열어요', '끌어서 이동, 휠·두 손가락으로 확대, 별을 누르면 그 글로 가요', '▶ 타임랩스를 누르면 첫 기록부터 별이 하나씩 태어나요']}
             tryLink="/universe" tryLabel="OwnLog 우주 열기" />
           <Feature accent icon="🌱" title="기록 잔디"
