@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router'
 import { api, errorMessage, fieldErrorsOf } from '../api/client'
 import { useAuth } from '../auth/useAuth'
 import FormField from '../components/FormField'
+import SocialLoginButtons from '../components/SocialLoginButtons'
 
 const USERNAME_HINT = {
   null: { text: '사용할 수 있는 아이디예요.', tone: 'green' },
@@ -116,6 +117,7 @@ export default function SignupPage() {
           {submitting ? '가입하는 중…' : '가입하기'}
         </button>
       </form>
+      <SocialLoginButtons />
       <p className="mt-4 text-center text-sm text-gray-600">
         이미 회원이신가요?{' '}
         <Link to="/login" className="text-indigo-600 hover:underline">

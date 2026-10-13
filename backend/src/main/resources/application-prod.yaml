@@ -11,11 +11,19 @@ spring:
     # 마이그레이션(V1)과 기록 테이블도 같은 스키마에 만들어요
     default-schema: ${DB_SCHEMA}
     schemas: ${DB_SCHEMA}
+  lifecycle:
+    # 정상 종료 때 처리 중인 요청을 끝낼 때까지 최대 20초 기다려요 (docker stop -t 30 안에 끝나요)
+    timeout-per-shutdown-phase: 20s
 
 server:
   # 서버의 Nginx 뒤에서 동작해요. X-Forwarded-* 헤더로 원래 주소(https, 도메인)를 알아요
   forward-headers-strategy: framework
+  # 무중단 배포: 꺼질 때 새 요청은 받지 않고, 처리 중인 요청은 끝까지 응답한 뒤 꺼져요 (docs/guide/배포와-CI-CD.md)
+  shutdown: graceful
 
 ownlog:
   upload:
     dir: /app/uploads   # docker run -v로 서버 폴더를 연결해서 컨테이너를 새로 띄워도 이미지가 남아요
+  oauth:
+    # 소셜 서비스에 등록한 Redirect URI와 같은 주소로 돌아오게 고정해요 (https://ownlog.java21.net/login/oauth2/code/kakao 등)
+    public-url: ${PUBLIC_URL:https://ownlog.java21.net}

@@ -3,7 +3,7 @@ name: CI
 
 on:
   push:
-    branches: [develop, "feature/**", "fix/**", "chore/**", "release/**", "hotfix/**"]
+    branches: [develop, "feature/**", "fix/**", "chore/**", "refactor/**", "test/**", "release/**", "hotfix/**"]
     paths-ignore:      # 문서만 바뀌면 테스트하지 않아요
       - "**.md"
       - "docs/**"

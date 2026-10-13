@@ -9,7 +9,7 @@ import { useAsync } from '../hooks/useAsync'
 import { TOPIC_COLORS } from '../utils/topicColors'
 import NotFoundPage from './NotFoundPage'
 
-/** 기록 우주 /@아이디/universe (GR-01 ~ GR-04): 글은 별, [[링크]]와 같은 태그는 선 */
+/** 기록 우주 /@아이디/universe (GR-01 ~ GR-04): 글은 별, [[링크]]와 관련 있는 글(드문 태그·단어를 함께 가진 글)은 선 */
 export default function UniversePage() {
   const { handle } = useParams()
   const username = handle.startsWith('@') ? handle.slice(1) : null
@@ -73,7 +73,7 @@ export default function UniversePage() {
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
         <span className="flex items-center gap-1"><span className="inline-block h-0.5 w-5 bg-indigo-300" /> [[링크]]</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-5 border-t border-dashed border-slate-400" /> 같은 태그</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-5 border-t border-dashed border-slate-400" /> 관련 있는 글</span>
         <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full bg-violet-500 opacity-60" /> 봉인된 타임캡슐</span>
         {usedTopics.map((t) => (
           <span key={t.slug} className="flex items-center gap-1">

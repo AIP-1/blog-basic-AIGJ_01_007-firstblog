@@ -18,11 +18,11 @@ import org.springframework.data.repository.Repository;
 public interface GraphRepository extends Repository<Post, Long> {
 
     /**
-     * 별: 그 블로그의 발행 글, 최신순. 방문자는 글·카테고리가 공개인 것만(봉인 캡슐 포함, 서비스에서 잠금 처리),
+     * 별: 그 블로그의 발행 글, 최신순. summary(150자 요약)는 관련 있는 글 계산(GR-02)에 써요 (본문 전체는 무거워서 읽지 않아요). 방문자는 글·카테고리가 공개인 것만(봉인 캡슐 포함, 서비스에서 잠금 처리),
      * 주인은 비공개도 모두. 봉인 캡슐을 빼면 공개 조건(ERD 4.1)과 같아요.
      */
     @Query("""
-            select new com.ownlog.universe.dto.GraphNodeRow(p.id, p.title, t.slug, p.likeCount, p.publishedAt, p.sealedAt,
+            select new com.ownlog.universe.dto.GraphNodeRow(p.id, p.title, p.summary, t.slug, p.likeCount, p.publishedAt, p.sealedAt,
                                                             u.username, u.nickname)
               from Post p join p.category c left join p.topic t join p.blog b join b.user u
              where b.id = :blogId
@@ -34,7 +34,7 @@ public interface GraphRepository extends Repository<Post, Long> {
     List<GraphNodeRow> findNodes(Long blogId, boolean owner, Pageable pageable);
 
     /** 14.3 서비스 전체 우주: 모든 블로그의 공개 글 (공개 조건 그대로, 봉인 캡슐 제외), 최신순 */
-    @Query("select new com.ownlog.universe.dto.GraphNodeRow(p.id, p.title, t.slug, p.likeCount, p.publishedAt, p.sealedAt,"
+    @Query("select new com.ownlog.universe.dto.GraphNodeRow(p.id, p.title, p.summary, t.slug, p.likeCount, p.publishedAt, p.sealedAt,"
             + " u.username, u.nickname)" + FROM_CARD + " where " + PUBLIC_CONDITION + LATEST)
     List<GraphNodeRow> findPublicNodes(Pageable pageable);
 
@@ -46,21 +46,7 @@ public interface GraphRepository extends Repository<Post, Long> {
             """, nativeQuery = true)
     List<LinkEdgeRow> findLinkEdges(Collection<Long> ids);
 
-    /** 태그 선: 태그를 1개 이상 공유하는 글 쌍과 공유한 태그들, 많이 공유한 순으로 limit개 */
-    @Query(value = """
-            SELECT a.post_id AS "source", b.post_id AS "target", COUNT(*) AS "weight",
-                   STRING_AGG(tg.name, ',' ORDER BY tg.name) AS "tags"
-              FROM post_tags a
-              JOIN post_tags b ON b.tag_id = a.tag_id AND a.post_id < b.post_id
-              JOIN tags tg ON tg.id = a.tag_id
-             WHERE a.post_id IN (:ids) AND b.post_id IN (:ids)
-             GROUP BY a.post_id, b.post_id
-             ORDER BY COUNT(*) DESC, a.post_id, b.post_id
-             LIMIT :limit
-            """, nativeQuery = true)
-    List<TagEdgeRow> findTagEdges(Collection<Long> ids, int limit);
-
-    /** 별에 마우스를 올렸을 때 보여줄 태그 */
+    /** 별에 마우스를 올렸을 때 보여줄 태그, 관련 있는 글 계산(GR-02)에도 같이 써요 */
     @Query(value = """
             SELECT pt.post_id AS "postId", tg.name AS "name"
               FROM post_tags pt JOIN tags tg ON tg.id = pt.tag_id
@@ -95,16 +81,6 @@ public interface GraphRepository extends Repository<Post, Long> {
         Long getSource();
 
         Long getTarget();
-    }
-
-    interface TagEdgeRow {
-        Long getSource();
-
-        Long getTarget();
-
-        Long getWeight();
-
-        String getTags();
     }
 
     interface PostTagRow {

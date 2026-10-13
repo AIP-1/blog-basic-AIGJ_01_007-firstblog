@@ -7,9 +7,9 @@ const page = await launch({ dir: dirname(fileURLToPath(import.meta.url)), port: 
 const bad = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5OTk5OSIsImV4cCI6MTAwMDAwMDAwMH0.invalid'
 const results = []
 for (const p of ['/signup', '/', '/login']) {
-  await page.goto('http://localhost:5173/')
+  await page.goto(`${BASE}/`)
   await page.eval(`localStorage.setItem('ownlog.accessToken', '${bad}')`)
-  await page.goto('http://localhost:5173' + p)
+  await page.goto(BASE + p)
   await new Promise((r) => setTimeout(r, 1500))
   const path = await page.path()
   const token = await page.eval(`localStorage.getItem('ownlog.accessToken')`)

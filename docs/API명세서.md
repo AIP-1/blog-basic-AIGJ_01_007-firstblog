@@ -40,6 +40,9 @@
 | 4.6 | PATCH | `/api/users/me/password` | 비밀번호 변경 | 🔒 | U-05 |
 | 4.7 | DELETE | `/api/users/me` | 회원 탈퇴 | 🔒 | U-06 |
 | 4.8 | GET | `/api/users/me/bookmarks` | 내 북마크 목록 | 🔒 | K-02 |
+| 4.9 | GET | `/api/auth/oauth/providers` | 켜져 있는 소셜 로그인 | 🔓 | U-09 |
+| 4.10 | POST | `/api/auth/oauth/exchange` | 소셜 로그인 코드 → 토큰 | 🔓 | U-09 |
+| 4.11 | GET | `/oauth2/authorization/{provider}` → `/login/oauth2/code/{provider}` | 소셜 로그인 시작·돌아오기 (브라우저 이동, API 아님) | 🔓 | U-09 |
 | 5.1 | GET | `/api/blogs/{username}` | 블로그 홈 정보 | 🔓 | B-01 |
 | 5.2 | PUT | `/api/blogs/{blogId}` | 블로그 이름·소개 수정 | 👤 | U-04 |
 | 5.3 | GET | `/api/blogs/{username}/categories` | 카테고리 사이드바 | 🔓 | B-02 |
@@ -240,6 +243,8 @@
 | `INVALID_CREDENTIALS` | 401 | 이메일 또는 비밀번호가 올바르지 않아요. | 4.2 |
 | `WRONG_PASSWORD` | 400 | 현재 비밀번호가 올바르지 않아요. | 4.6, 4.7 |
 | `USER_NOT_FOUND` | 404 | 존재하지 않는 사용자예요. | 5.1 등 `{username}` 조회 |
+| `WRONG_CONFIRM_USERNAME` | 400 | 확인용 아이디가 올바르지 않아요. | 4.7 (비밀번호 없는 소셜 회원) |
+| `INVALID_OAUTH_CODE` | 400 | 로그인 시간이 지났어요. 다시 시도해 주세요. | 4.10 |
 | **블로그 · 카테고리** | | | |
 | `BLOG_NOT_FOUND` | 404 | 존재하지 않는 블로그예요. | 5.2 |
 | `CATEGORY_NOT_FOUND` | 404 | 존재하지 않는 카테고리예요. | 5.6, 5.7 |
@@ -377,9 +382,12 @@
     "name": "나영의 개발일지",
     "description": "Spring과 React 공부 기록"
   },
-  "createdAt": "2026-10-01T10:00:00+09:00"
+  "createdAt": "2026-10-01T10:00:00+09:00",
+  "passwordSet": true
 }
 ```
+> `passwordSet`(v1.2.0): `false`면 소셜 로그인으로만 가입해서 비밀번호가 없어요. 4.6·4.7 화면이 달라져요.
+>
 > 새로고침한 뒤 로그인 상태를 복원할 때도 이 API를 써요. 토큰이 유효하면 200, 아니면 401이에요.
 
 ---
@@ -427,6 +435,8 @@
 
 **에러:** `INVALID_INPUT` · `WRONG_PASSWORD` · `PASSWORD_CONFIRM_MISMATCH`
 
+> 소셜 회원(`passwordSet=false`)은 `currentPassword` 없이 **처음 비밀번호를 만들어요.** 만든 뒤부터는 다른 회원과 같아요.
+
 > 💡 현재 비밀번호가 틀렸을 때 **401이 아니라 400**(`WRONG_PASSWORD`)이에요. 401을 쓰면 프론트엔드가 "토큰 만료"로 착각해서 로그아웃시켜 버려요.
 
 ---
@@ -446,7 +456,10 @@
 
 처리 순서는 ERD 5장을 따라요. 글·카테고리·블로그 삭제 → 좋아요(`like_count` 보정)·북마크 삭제 → 개인정보 정리 후 `status = DELETED`. 응답을 받으면 프론트엔드는 토큰을 지우고 메인으로 이동해요.
 
-**에러:** `WRONG_PASSWORD`
+**에러:** `WRONG_PASSWORD` · `WRONG_CONFIRM_USERNAME`
+
+> 소셜 회원(`passwordSet=false`)은 비밀번호 대신 **내 아이디**로 확인해요: `{ "username": "kakao_x7k2m9" }`.
+> 탈퇴하면 소셜 계정 연결(`user_social_accounts`)도 지워서, 같은 소셜 계정으로 다시 오면 새 회원으로 가입돼요.
 
 ---
 
@@ -476,6 +489,50 @@
   "page": 1, "size": 12, "totalElements": 1, "totalPages": 1
 }
 ```
+
+---
+
+### 4.9 켜져 있는 소셜 로그인
+`GET /api/auth/oauth/providers` 🔓 · U-09
+
+서버에 키(client id·secret)가 **둘 다** 등록된 서비스만, 버튼 순서(카카오 → 네이버 → 구글 → 깃허브)대로 알려줘요.
+하나도 없으면 빈 배열이고, 화면은 소셜 로그인 영역을 그리지 않아요.
+
+**응답 `200 OK`**
+```json
+{ "providers": ["kakao", "github"] }
+```
+
+---
+
+### 4.10 소셜 로그인 코드 → 토큰
+`POST /api/auth/oauth/exchange` 🔓 · U-09
+
+**요청**
+```json
+{ "code": "q3Jd...(1회용 코드)" }
+```
+
+**응답 `200 OK`**: 4.2 로그인과 같은 형태 (`accessToken`, `user` …)
+
+**에러:** `INVALID_OAUTH_CODE` (없는 코드, 이미 쓴 코드, 60초가 지난 코드)
+
+---
+
+### 4.11 소셜 로그인 흐름 (브라우저 이동)
+
+```
+① 버튼 클릭        GET /oauth2/authorization/kakao        → 302 카카오 동의 화면 (state 포함)
+② 사용자 동의      카카오 → GET /login/oauth2/code/kakao?code=…&state=…
+③ 서버             state 확인 → code로 카카오 토큰 받기 → 회원 정보 받기 → OwnLog 회원 찾기/만들기
+④ 서버             302 /oauth/callback#code={1회용 코드}
+⑤ 화면             POST /api/auth/oauth/exchange {code} → JWT 저장 → 원래 보던 화면으로
+실패하면           302 /login?oauthError=email_in_use | inactive | failed
+```
+
+- JWT를 주소에 싣지 않고 **60초짜리 1회용 코드**를 `#` 뒤에 실어요. `#` 뒤는 서버로 전송되지 않아 로그에 남지 않고, 화면이 읽자마자 주소에서 지워요.
+- 확인된 이메일이 **기존 회원과 같으면 자동으로 연결하지 않고** `email_in_use`로 돌려보내요 (계정 탈취 방지).
+- 자세한 설명과 서비스별 키 발급 방법: [`docs/guide/소셜-로그인.md`](guide/소셜-로그인.md)
 
 ---
 
@@ -1275,7 +1332,13 @@
 
 - **별(nodes)**: 보는 사람이 볼 수 있는 그 블로그의 발행 글, 최신 300개까지. 방문자는 글·카테고리가 공개인 것만, 주인은 비공개 포함이에요. 봉인된 타임캡슐은 `locked: true`이고, **방문자에게는** 제목과 `openAt`만 줘요(토픽·좋아요·태그·연결 수 없음).
 - 별에는 **`writtenAt`**(쓴 시각, 타임캡슐은 봉인 시각: 타임랩스 GR-05에서 별이 태어나는 시각)과 **`username`·`nickname`**(그 글의 블로그)도 있어요.
-- **선(edges)**: `LINK`는 `source`가 `target`을 `[[링크]]`한 것(방향 있음), `TAG`는 두 글이 태그를 `weight`개 공유한 것(방향 없음, 공유 많은 순 최대 1,000개). 방문자에게 잠긴 캡슐에는 선이 없어요.
+- **선(edges)**: `LINK`는 `source`가 `target`을 `[[링크]]`한 것(방향 있음). `RELATED`는 **정말 관련 있는 글** 쌍이에요(방향 없음, `source < target`).
+  - 관련도 `weight`(0~1, 소수 둘째 자리) = max(드문 태그일수록 무게가 큰 태그 겹침, 제목·요약·태그의 TF-IDF 코사인 유사도). **0.3 이상**이고 별마다 가장 가까운 **3개** 안에 드는 쌍만, 많아야 1,000개예요.
+  - 근거: `tags`(함께 붙은 드문 태그), `keywords`(함께 나온 단어, 최대 3개). 별이 4개 이상이면 절반 넘는 글에 붙은 흔한 태그·단어는 쓰지 않아서 `#여행` 하나로는 이어지지 않아요.
+  - 이미 `[[링크]]`로 이어진 쌍은 `RELATED`를 또 주지 않아요.
+  - 계산에는 **보는 사람이 볼 수 있는 글의 제목·150자 요약·태그만** 써요(외부 전송 없음). 방문자에게 잠긴 캡슐은 선도 없고 계산에도 들어가지 않아요.
+  - 자세한 원리: `docs/guide/기록-우주-연관도.md`
+  - 변경(2026-10-13): 예전 `TAG`(태그를 하나라도 공유하면 연결, `weight`는 공유 개수)를 `RELATED`로 바꿨어요.
 - `truncated`: 글이 300개를 넘어서 잘렸는지.
 
 **응답 `200 OK`**
@@ -1288,7 +1351,7 @@
   ],
   "edges": [
     { "source": 51, "target": 17, "type": "LINK" },
-    { "source": 17, "target": 30, "type": "TAG", "weight": 2, "tags": ["JWT", "Spring"] }
+    { "source": 17, "target": 30, "type": "RELATED", "weight": 0.62, "tags": ["JWT", "보안"], "keywords": ["필터"] }
   ],
   "truncated": false
 }
@@ -1320,7 +1383,7 @@
 ### 14.3 서비스 전체 우주
 `GET /api/universe` 🔓 · GR-06, GR-07
 
-**모든 블로그의 공개 글**(공개 조건 그대로: 비공개 글·비공개 카테고리·봉인된 캡슐·받는 사람 캡슐 제외)을 최신 500개까지 별로 주고, 그 사이의 `LINK`·`TAG` 선(태그 선은 최대 1,500개)을 줘요. 응답 모양은 14.1과 같아요. 화면은 별의 `username`으로 블로그(은하)를 나눠 색과 무리를 정해요.
+**모든 블로그의 공개 글**(공개 조건 그대로: 비공개 글·비공개 카테고리·봉인된 캡슐·받는 사람 캡슐 제외)을 최신 500개까지 별로 주고, 그 사이의 `LINK`·`RELATED` 선(관련 선은 14.1과 같은 규칙, 최대 1,500개)을 줘요. 블로그가 달라도 관련 있는 공개 글끼리 이어져요. 응답 모양은 14.1과 같아요. 화면은 별의 `username`으로 블로그(은하)를 나눠 색과 무리를 정해요.
 
 **응답 `200 OK`**
 ```json

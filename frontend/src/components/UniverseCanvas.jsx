@@ -13,6 +13,7 @@ const radiusOf = (n) => (n.locked ? 5 : Math.min(18, 4 + Math.sqrt((n.linkCount 
  * 타임랩스는 1초에 60번 바뀌어서, 화면(React) 상태 대신 캔버스에 직접 알려줘서 페이지 전체가 다시 그려지지 않게 해요.
  * focusId는 { id, n } 형태라서 같은 별을 다시 찾아도(n이 바뀌면) 다시 이동해요.
  * colorOf(node)를 주면 별 색을 바꿔요 (서비스 전체 우주는 블로그별 색). groupOf(node)를 주면 같은 그룹끼리 모여요 (은하).
+ * 선: LINK는 밝은 실선 + 화살표, RELATED(관련 있는 글, weight 0~1)는 점선이고 관련도가 높을수록 진하고 굵어요 (GR-02).
  */
 export default function UniverseCanvas({ ref, graph, onSelect, highlightIds, focusId, colorOf, groupOf }) {
   const wrapRef = useRef(null)
@@ -30,7 +31,21 @@ export default function UniverseCanvas({ ref, graph, onSelect, highlightIds, foc
     const ctx = canvas.getContext('2d')
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    const nodes = graph.nodes.map((n) => ({ ...n, r: radiusOf(n), born: Number(new Date(n.writtenAt ?? n.publishedAt ?? 0)), color: pickColor(n) }))
+    // 별에 마우스를 올리면 "관련: #태그 · 단어"로 왜 이어졌는지 보여줘요 (관련 선의 근거를 별마다 모아요)
+    const reasons = new Map()
+    for (const e of graph.edges) {
+      if (e.type !== 'RELATED') continue
+      for (const id of [e.source, e.target]) {
+        const set = reasons.get(id) ?? new Set()
+        for (const t of e.tags ?? []) set.add(`#${t}`)
+        for (const k of e.keywords ?? []) set.add(k)
+        reasons.set(id, set)
+      }
+    }
+    const nodes = graph.nodes.map((n) => ({
+      ...n, r: radiusOf(n), born: Number(new Date(n.writtenAt ?? n.publishedAt ?? 0)), color: pickColor(n),
+      related: [...(reasons.get(n.id) ?? [])].slice(0, 4),
+    }))
     const byId = new Map(nodes.map((n) => [n.id, n]))
     const links = graph.edges
       .filter((e) => byId.has(e.source) && byId.has(e.target))
@@ -54,8 +69,8 @@ export default function UniverseCanvas({ ref, graph, onSelect, highlightIds, foc
 
     const sim = forceSimulation(nodes)
       .force('link', forceLink(links).id((d) => d.id)
-        .distance((l) => (l.type === 'LINK' ? 90 : 140))
-        .strength((l) => (l.type === 'LINK' ? 0.7 : Math.min(0.4, 0.08 * (l.weight ?? 1)))))
+        .distance((l) => (l.type === 'LINK' ? 90 : 150 - 40 * (l.weight ?? 0)))
+        .strength((l) => (l.type === 'LINK' ? 0.7 : 0.1 + 0.3 * (l.weight ?? 0))))
       .force('charge', forceManyBody().strength(-320))
       .force('x', forceX((d) => d.anchor?.x ?? 0).strength((d) => (d.anchor ? 0.12 : 0.04)))
       .force('y', forceY((d) => d.anchor?.y ?? 0).strength((d) => (d.anchor ? 0.12 : 0.04)))
@@ -216,13 +231,14 @@ export default function UniverseCanvas({ ref, graph, onSelect, highlightIds, foc
       ctx.globalAlpha = 1
       ctx.setTransform(dpr * view.k, 0, 0, dpr * view.k, dpr * view.x, dpr * view.y)
 
-      for (const l of links) {   // 선: 태그(흐린 점선) → 링크(밝은 실선 + 화살표)
+      for (const l of links) {   // 선: 관련 있는 글(점선, 관련도만큼 진하고 굵게) → 링크(밝은 실선 + 화살표)
         const a = l.source, b = l.target
         if (!isShown(a) || !isShown(b)) continue
-        if (l.type === 'TAG') {
+        if (l.type !== 'LINK') {
+          const w = l.weight ?? 0
           ctx.setLineDash([3, 4])
-          ctx.strokeStyle = `rgba(148,163,184,${Math.min(0.5, 0.12 + 0.08 * (l.weight ?? 1))})`
-          ctx.lineWidth = 1 / view.k
+          ctx.strokeStyle = `rgba(148,163,184,${0.15 + 0.45 * w})`
+          ctx.lineWidth = (0.6 + 1.2 * w) / view.k
         } else {
           ctx.setLineDash([])
           ctx.strokeStyle = 'rgba(165,180,252,0.85)'
@@ -362,6 +378,9 @@ export default function UniverseCanvas({ ref, graph, onSelect, highlightIds, foc
               연결 {hover.node.linkCount} · ♥ {hover.node.likeCount}
               {hover.node.tags?.length > 0 && ` · ${hover.node.tags.map((t) => `#${t}`).join(' ')}`}
             </p>
+          )}
+          {!hover.node.locked && hover.node.related?.length > 0 && (
+            <p className="mt-0.5 text-slate-500">관련: {hover.node.related.join(' · ')}</p>
           )}
         </div>
       )}

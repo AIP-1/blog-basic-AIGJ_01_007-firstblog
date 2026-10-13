@@ -1,5 +1,8 @@
 package com.ownlog.global.config;
 
+import com.ownlog.auth.oauth.OAuthClientRegistrations;
+import com.ownlog.auth.oauth.OAuthLoginHandlers;
+import com.ownlog.auth.oauth.OAuthProperties;
 import com.ownlog.global.security.JwtAuthenticationFilter;
 import com.ownlog.global.security.JwtProperties;
 import com.ownlog.global.security.JwtTokenProvider;
@@ -14,18 +17,21 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, OAuthProperties.class})
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtTokenProvider tokenProvider;
     private final UserRepository userRepository;
     private final SecurityErrorHandler securityErrorHandler;
+    private final OAuthClientRegistrations oauthClientRegistrations;
+    private final OAuthLoginHandlers oauthLoginHandlers;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -43,7 +49,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 🔓 인증 (API 명세서 4.1 ~ 4.3)
                         .requestMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/auth/check-username").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/auth/check-username", "/api/auth/oauth/providers").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/oauth/exchange").permitAll()
                         // 🔓 읽기 전용 공개 API (5.1, 5.3, 6.1 ~ 6.5, 6.9, 8.1, 12.1 ~ 12.2, 13.1, 14.1 ~ 14.3)
                         .requestMatchers(HttpMethod.GET,
                                 "/api/blogs/**",
@@ -65,12 +72,27 @@ public class SecurityConfig {
                 .addFilterBefore(new JwtAuthenticationFilter(tokenProvider, userRepository),
                         UsernamePasswordAuthenticationFilter.class);
 
+        // 소셜 로그인 (U-09): 키를 등록한 서비스가 하나라도 있을 때만 켜요.
+        //   /oauth2/authorization/kakao → 카카오 동의 화면 → /login/oauth2/code/kakao → OAuthLoginHandlers
+        // 세션은 이 몇 초 동안 state(요청 위조 방지 값)를 기억하는 데만 쓰고, 그 뒤 인증은 지금처럼 JWT예요
+        if (!oauthClientRegistrations.all().isEmpty()) {
+            http.oauth2Login(oauth -> oauth
+                    .clientRegistrationRepository(new InMemoryClientRegistrationRepository(oauthClientRegistrations.all()))
+                    .loginPage("/login")   // Spring 기본 로그인 화면을 만들지 않고 React 화면(/login)을 써요
+                    .successHandler(oauthLoginHandlers)
+                    .failureHandler(oauthLoginHandlers));
+        }
+
         return http.build();
     }
 
-    /** 비밀번호 단방향 해시 (NF-01) */
+    /**
+     * 비밀번호 단방향 해시 (NF-01).
+     * static: 이 설정 클래스가 만들어지기 전에도 꺼낼 수 있어요. 소셜 로그인 처리기 → 회원 가입 서비스 → PasswordEncoder를
+     * 이 클래스가 다시 필요로 해서, static이 아니면 "서로를 기다리는" 순환 참조로 서버가 뜨지 않아요.
+     */
     @Bean
-    public PasswordEncoder passwordEncoder() {
+    public static PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 }

@@ -28,6 +28,8 @@ public enum ErrorCode {
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않아요."),
     WRONG_PASSWORD(HttpStatus.BAD_REQUEST, "현재 비밀번호가 올바르지 않아요."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자예요."),
+    WRONG_CONFIRM_USERNAME(HttpStatus.BAD_REQUEST, "확인용 아이디가 올바르지 않아요."),
+    INVALID_OAUTH_CODE(HttpStatus.BAD_REQUEST, "로그인 시간이 지났어요. 다시 시도해 주세요."),
 
     // 블로그 · 카테고리 · 토픽
     BLOG_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 블로그예요."),
