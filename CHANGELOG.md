@@ -9,6 +9,15 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-13
+
+### 수정
+- 기록 우주 타임랩스가 운영 서버에서 사실상 동작하지 않던 문제: 글이 짧은 시간에 몰려 있으면 ▶를 누르자마자 별이 거의 다 나타나고 나머지 8초는 변화가 없었어요. 시간 비례 대신 **쓴 순서대로 하나씩** 태어나게 바꿨어요 (트러블슈팅 13번)
+- 위 수정 직후 가끔 우주 화면이 오류 화면으로 바뀌던 문제: 애니메이션 시각이 시작 시각보다 이를 때 진행률이 음수가 됐어요 (트러블슈팅 14번)
+
+### 변경
+- 화면 점검 도구: 브라우저 명령 30초·점검 하나 4분 제한 (멈춰도 실패로 보고하고 다음 점검 진행, 트러블슈팅 15번)
+
 ## [1.0.0] - 2026-10-12
 
 > 첫 정식 버전 (발표·제출 버전). 0.x에서 만든 MVP와 기록 유니버스, 보안 점검 결과를 모두 담았어요.
@@ -86,7 +95,8 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 - 기획(요구사항 명세), ERD, API 명세서 (2026-10-01 ~ 10-06)
 - 백엔드 REST API 38개 (Spring Boot 4.1, JWT, Flyway), 통합·동시성·롤백 테스트 121개
 
-[Unreleased]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.0.0...develop
+[Unreleased]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.0.1...develop
+[1.0.1]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v0.6.0...v1.0.0
 [0.6.0]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v0.4.0...v0.5.0

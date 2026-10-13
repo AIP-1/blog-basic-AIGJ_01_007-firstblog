@@ -42,9 +42,17 @@ export async function launch({ port = 9333 } = {}) {
       msg.error ? reject(new Error(msg.error.message)) : resolve(msg.result)
     }
   })
+  // 명령마다 30초 제한: 브라우저가 가끔 응답하지 않으면 영원히 기다리지 않고 실패로 끝내요
   const send = (method, params = {}) => new Promise((resolve, reject) => {
     const msgId = ++id
-    pending.set(msgId, { resolve, reject })
+    const timer = setTimeout(() => {
+      pending.delete(msgId)
+      reject(new Error(`Chrome 응답 없음 (30초): ${method}`))
+    }, 30_000)
+    pending.set(msgId, {
+      resolve: (v) => { clearTimeout(timer); resolve(v) },
+      reject: (e) => { clearTimeout(timer); reject(e) },
+    })
     ws.send(JSON.stringify({ id: msgId, method, params }))
   })
   await send('Page.enable')
