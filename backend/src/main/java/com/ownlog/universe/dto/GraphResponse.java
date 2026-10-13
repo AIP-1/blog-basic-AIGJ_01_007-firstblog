@@ -18,8 +18,15 @@ public record GraphResponse(List<Node> nodes, List<Edge> edges, boolean truncate
                        boolean locked, OffsetDateTime openAt, String username, String nickname) {
     }
 
-    /** 선. type: LINK(source가 target을 [[링크]]) / TAG(태그를 weight개 공유) */
+    /**
+     * 선. type: LINK(source가 target을 [[링크]], 방향 있음) / RELATED(관련 있는 글, 방향 없음, GR-02).
+     * RELATED만 weight(관련도 0~1, 소수 둘째 자리), tags(함께 붙은 드문 태그), keywords(함께 나온 단어)가 있어요.
+     */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record Edge(Long source, Long target, String type, Integer weight, List<String> tags) {
+    public record Edge(Long source, Long target, String type, Double weight, List<String> tags, List<String> keywords) {
+
+        public static Edge link(Long source, Long target) {
+            return new Edge(source, target, "LINK", null, null, null);
+        }
     }
 }

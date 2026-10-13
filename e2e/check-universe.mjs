@@ -25,7 +25,7 @@ try {
   // 2. 별들이 퍼지며 자리를 잡음
   await page.waitFor(`document.querySelector('canvas').dataset.settled === 'true'`, 15000)
   const text = await page.text()
-  check('2. 자리 잡기 완료, 헤더에 "기록 N개 · 연결 M개", 범례', text.includes(`기록 ${graph.nodes.length}개`) && text.includes('같은 태그') && text.includes('봉인된 타임캡슐'))
+  check('2. 자리 잡기 완료, 헤더에 "기록 N개 · 연결 M개", 범례', text.includes(`기록 ${graph.nodes.length}개`) && text.includes('관련 있는 글') && text.includes('봉인된 타임캡슐'))
   await page.screenshot(join(SHOTS, '40-universe.png'))
 
   // 3. 검색 → 강조 + 그 별로 이동 → 그 자리 클릭하면 글로 이동

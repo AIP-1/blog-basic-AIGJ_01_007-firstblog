@@ -79,7 +79,7 @@ export default function GlobalUniversePage() {
           </Link>
         ))}
       </section>
-      <p className="text-xs text-gray-400">은하(블로그)를 누르면 그 블로그의 우주로 가요 · 밝은 실선은 [[링크]], 점선은 같은 태그예요</p>
+      <p className="text-xs text-gray-400">은하(블로그)를 누르면 그 블로그의 우주로 가요 · 밝은 실선은 [[링크]], 점선은 관련 있는 글(진할수록 더 관련 있어요)이에요</p>
     </div>
   )
 }
