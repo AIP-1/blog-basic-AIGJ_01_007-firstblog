@@ -108,7 +108,8 @@ docker exec ownlog-postgres psql -U ownlog -d ownlog   # 로컬 DB 접속
 ## 10. 배포
 - `main` 푸시(= release·hotfix 병합) → GitHub Actions `deploy.yml`(테스트 → Docker 이미지 → scp → `deploy/deploy.sh`). `*.md`, `docs/`, `scripts/`만 바뀌면 배포하지 않아요.
 - `develop`·작업 브랜치 푸시와 PR → `ci.yml`(테스트만, 배포 없음).
-- 서버: `s2.java21.net`(SSH 8822), 앱 포트 **8360**, 컨테이너는 `--network host`(Docker 기본 네트워크로는 내부망 DB에 못 가요), 업로드는 `~/ownlog-uploads`.
+- 서버: `s2.java21.net`(SSH 8822), 공용 Nginx → **8360**(우리 프록시 `ownlog-proxy`) → `ownlog-blue`(8361) / `ownlog-green`(8362) **블루-그린 무중단 배포**. 컨테이너는 `--network host`(Docker 기본 네트워크로는 내부망 DB에 못 가요), 업로드는 `~/ownlog-uploads`, 활성 색은 `~/ownlog-deploy/active-color`.
+- 마이그레이션은 배포 중 예전 버전과 공존하도록 **추가만** 해요 (컬럼 삭제·이름 변경은 다음 릴리스에서, `docs/guide/배포와-CI-CD.md` 4.4).
 - `deploy.sh`는 시작 전에 DB 연결을 확인하고, 실패하면 원인(Caused by)을 보여줘요. 배포 결과는 Actions 화면이나 `https://ownlog.java21.net/api/topics`로 확인해요.
 - Nginx 설정(`~/nginx/ownlog.java21.net.conf`)을 바꾸면 강사님께 반영을 요청해야 해요.
 
