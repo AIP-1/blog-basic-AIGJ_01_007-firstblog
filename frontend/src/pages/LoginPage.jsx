@@ -3,6 +3,15 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { errorMessage } from '../api/client'
 import { useAuth } from '../auth/useAuth'
 import FormField from '../components/FormField'
+import SocialLoginButtons from '../components/SocialLoginButtons'
+import { safeRedirect } from '../utils/safeRedirect'
+
+/** 소셜 로그인이 실패해서 돌아왔을 때(?oauthError=) 보여줄 문장 */
+const OAUTH_ERRORS = {
+  email_in_use: '이 이메일로 이미 가입한 계정이 있어요. 이메일과 비밀번호로 로그인해 주세요.',
+  inactive: '탈퇴한 계정이에요.',
+  failed: '소셜 로그인을 마치지 못했어요. 다시 시도해 주세요.',
+}
 
 /** 로그인 (API 4.2). 실패 이유는 구분하지 않고 서버 메시지를 그대로 보여줘요 (NF-06) */
 export default function LoginPage() {
@@ -10,7 +19,8 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [form, setForm] = useState({ email: '', password: '' })
-  const [error, setError] = useState('')
+  const oauthError = searchParams.get('oauthError')
+  const [error, setError] = useState(oauthError ? OAUTH_ERRORS[oauthError] ?? OAUTH_ERRORS.failed : '')
   const [submitting, setSubmitting] = useState(false)
 
   const change = (e) => setForm({ ...form, [e.target.name]: e.target.value })
@@ -49,6 +59,7 @@ export default function LoginPage() {
           {submitting ? '로그인 중…' : '로그인'}
         </button>
       </form>
+      <SocialLoginButtons redirect={searchParams.get('redirect') || '/'} />
       <p className="mt-4 text-center text-sm text-gray-600">
         아직 회원이 아니신가요?{' '}
         <Link to="/signup" className="text-indigo-600 hover:underline">
@@ -58,21 +69,4 @@ export default function LoginPage() {
       </div>
     </div>
   )
-}
-
-/**
- * 우리 사이트 안의 주소로만 돌아가요 (오픈 리다이렉트 방지).
- * "//evil.com"뿐 아니라 "/\t/evil.com"처럼 제어 문자·역슬래시를 섞어 브라우저가 외부 주소로 해석하게 만드는 경우도 막으려고,
- * 실제 URL로 해석해서 우리 출처(origin)인지 확인하고 경로 부분만 써요.
- */
-function safeRedirect(redirect) {
-  // 제어 문자(탭·줄바꿈 등)를 일부러 찾는 정규식이에요
-  // eslint-disable-next-line no-control-regex
-  if (!redirect || !redirect.startsWith('/') || /[\u0000-\u001f\\]/.test(redirect)) return '/'
-  try {
-    const url = new URL(redirect, window.location.origin)
-    return url.origin === window.location.origin ? url.pathname + url.search + url.hash : '/'
-  } catch {
-    return '/'
-  }
 }

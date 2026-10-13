@@ -5,6 +5,9 @@ import com.ownlog.auth.dto.LoginResponse;
 import com.ownlog.auth.dto.SignupRequest;
 import com.ownlog.auth.dto.SignupResponse;
 import com.ownlog.auth.dto.UsernameCheckResponse;
+import com.ownlog.auth.oauth.OAuthClientRegistrations;
+import java.util.List;
+import java.util.Map;
 import com.ownlog.auth.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final OAuthClientRegistrations oauthClientRegistrations;
 
     /** API 4.1 회원가입 → 201 */
     @PostMapping("/signup")
@@ -40,5 +44,17 @@ public class AuthController {
     @GetMapping("/check-username")
     public UsernameCheckResponse checkUsername(@RequestParam String username) {
         return authService.checkUsername(username);
+    }
+
+    /** API 4.8 켜져 있는 소셜 로그인 (키를 등록한 서비스만, 버튼 순서대로) */
+    @GetMapping("/oauth/providers")
+    public Map<String, List<String>> oauthProviders() {
+        return Map.of("providers", oauthClientRegistrations.enabledProviderIds());
+    }
+
+    /** API 4.9 소셜 로그인 1회용 코드 → 토큰 */
+    @PostMapping("/oauth/exchange")
+    public LoginResponse exchange(@RequestBody Map<String, String> body) {
+        return authService.exchangeOAuthCode(body.get("code"));
     }
 }

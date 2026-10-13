@@ -19,3 +19,6 @@ server:
 ownlog:
   upload:
     dir: /app/uploads   # docker run -v로 서버 폴더를 연결해서 컨테이너를 새로 띄워도 이미지가 남아요
+  oauth:
+    # 소셜 서비스에 등록한 Redirect URI와 같은 주소로 돌아오게 고정해요 (https://ownlog.java21.net/login/oauth2/code/kakao 등)
+    public-url: ${PUBLIC_URL:https://ownlog.java21.net}

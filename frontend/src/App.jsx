@@ -10,6 +10,7 @@ import LoginPage from './pages/LoginPage'
 import MainPage from './pages/MainPage'
 import GuidePage from './pages/GuidePage'
 import NotFoundPage from './pages/NotFoundPage'
+import OAuthCallbackPage from './pages/OAuthCallbackPage'
 import ReceivedCapsulesPage from './pages/ReceivedCapsulesPage'
 import SearchPage from './pages/SearchPage'
 import SettingsPage from './pages/SettingsPage'
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="/" element={<MainPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/guide" element={<GuidePage />} />
         <Route path="/tags/:tagName" element={<TagPage />} />

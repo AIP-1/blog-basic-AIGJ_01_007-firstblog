@@ -1,5 +1,6 @@
 package com.ownlog.user.service;
 
+import com.ownlog.auth.oauth.SocialAccountRepository;
 import com.ownlog.blog.service.BlogService;
 import com.ownlog.global.error.BusinessException;
 import com.ownlog.global.error.ErrorCode;
@@ -26,6 +27,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final BlogService blogService;
     private final PasswordEncoder passwordEncoder;
+    private final SocialAccountRepository socialAccountRepository;
     private final WithdrawalCleaner withdrawalCleaner;
     private final ImageReferenceChecker imageReferenceChecker;
     private final ApplicationEventPublisher eventPublisher;
@@ -54,7 +56,7 @@ public class UserService {
     @Transactional
     public void changePassword(Long userId, PasswordChangeRequest request) {
         User user = getUser(userId);
-        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+        if (user.isPasswordSet() && !matches(request.currentPassword(), user)) {
             throw new BusinessException(ErrorCode.WRONG_PASSWORD);
         }
         if (!request.newPassword().equals(request.newPasswordConfirm())) {
@@ -70,14 +72,19 @@ public class UserService {
     @Transactional
     public void withdraw(Long userId, WithdrawRequest request) {
         User user = getUser(userId);
-        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new BusinessException(ErrorCode.WRONG_PASSWORD);
+        if (user.isPasswordSet()) {
+            if (!matches(request.password(), user)) {
+                throw new BusinessException(ErrorCode.WRONG_PASSWORD);
+            }
+        } else if (!user.getUsername().equals(request.username())) {
+            throw new BusinessException(ErrorCode.WRONG_CONFIRM_USERNAME);
         }
         String oldImage = user.getProfileImageUrl();
 
         withdrawalCleaner.deleteBlogsOf(userId);       // ① 내 블로그의 글(+ 딸린 것), 카테고리, 블로그
         withdrawalCleaner.deleteLikesOf(userId);       // ② 남의 글에 누른 내 좋아요 + like_count 보정
         withdrawalCleaner.deleteBookmarksOf(userId);   // ③ 내 북마크
+        socialAccountRepository.deleteByUserId(userId);    // ③-1 소셜 계정 연결을 끊어요 (다시 오면 새 회원으로 가입돼요)
         user.withdraw(passwordEncoder.encode(UUID.randomUUID().toString()));   // ④ 개인정보 익명화 + DELETED
 
         if (oldImage != null) {
@@ -90,6 +97,10 @@ public class UserService {
         if (!imageReferenceChecker.isUsedElsewhere(url, userId)) {
             eventPublisher.publishEvent(new ImageDeleteEvent(url));
         }
+    }
+
+    private boolean matches(String rawPassword, User user) {
+        return rawPassword != null && !rawPassword.isBlank() && passwordEncoder.matches(rawPassword, user.getPassword());
     }
 
     private User getUser(Long userId) {

@@ -23,3 +23,19 @@ ownlog:
     access-token-validity: 2h # U-03
   upload:
     dir: ${UPLOAD_DIR:./uploads}
+  # 소셜 로그인 (U-09). 키가 비어 있는 서비스는 꺼지고 그 버튼도 보이지 않아요 (docs/guide/소셜-로그인.md)
+  oauth:
+    public-url: ${PUBLIC_URL:}
+    clients:
+      kakao:
+        client-id: ${OAUTH_KAKAO_CLIENT_ID:}
+        client-secret: ${OAUTH_KAKAO_CLIENT_SECRET:}
+      naver:
+        client-id: ${OAUTH_NAVER_CLIENT_ID:}
+        client-secret: ${OAUTH_NAVER_CLIENT_SECRET:}
+      google:
+        client-id: ${OAUTH_GOOGLE_CLIENT_ID:}
+        client-secret: ${OAUTH_GOOGLE_CLIENT_SECRET:}
+      github:
+        client-id: ${OAUTH_GITHUB_CLIENT_ID:}
+        client-secret: ${OAUTH_GITHUB_CLIENT_SECRET:}

@@ -28,8 +28,13 @@ export default function SettingsPage() {
       </div>
       <ProfileForm user={user} onSaved={reloadMe} />
       <BlogForm user={user} onSaved={reloadMe} />
-      <PasswordForm />
+      {/* 이메일을 주지 않는 소셜 서비스로 가입하면 이메일 로그인을 쓸 수 없어서 비밀번호 칸을 숨겨요 */}
+      {(user.passwordSet || !user.email.endsWith('@social.ownlog.invalid')) && (
+        <PasswordForm passwordSet={user.passwordSet} email={user.email} onPasswordCreated={reloadMe} />
+      )}
       <WithdrawForm
+        passwordSet={user.passwordSet}
+        username={user.username}
         onDone={() => {
           logout()
           navigate('/', { replace: true })
@@ -147,36 +152,46 @@ function BlogForm({ user, onSaved }) {
   )
 }
 
-function PasswordForm() {
+function PasswordForm({ passwordSet, email, onPasswordCreated }) {
   const EMPTY = { currentPassword: '', newPassword: '', newPasswordConfirm: '' }
   const [form, setForm] = useState(EMPTY)
   const [state, submit] = useSubmit()
   const change = (e) => setForm({ ...form, [e.target.name]: e.target.value })
   return (
-    <Card title="비밀번호 변경">
+    <Card title={passwordSet ? '비밀번호 변경' : '비밀번호 만들기'}>
+      {!passwordSet && (
+        <p className="mb-4 text-sm text-gray-600">
+          소셜 로그인으로 가입해서 아직 비밀번호가 없어요. 만들어 두면 이메일({email})과 비밀번호로도 로그인할 수 있어요.
+        </p>
+      )}
       <form
         className="space-y-4"
         onSubmit={async (e) => {
           e.preventDefault()
-          if (await submit(() => changePassword(form), '비밀번호를 바꿨어요.')) setForm(EMPTY)
+          if (await submit(() => changePassword(form), passwordSet ? '비밀번호를 바꿨어요.' : '비밀번호를 만들었어요.')) {
+            setForm(EMPTY)
+            if (!passwordSet) onPasswordCreated()
+          }
         }}
       >
-        <FormField label="현재 비밀번호" name="currentPassword" type="password" value={form.currentPassword} onChange={change} required
-          autoComplete="current-password" error={state.fieldErrors.currentPassword} />
+        {passwordSet && (
+          <FormField label="현재 비밀번호" name="currentPassword" type="password" value={form.currentPassword} onChange={change} required
+            autoComplete="current-password" error={state.fieldErrors.currentPassword} />
+        )}
         <FormField label="새 비밀번호" name="newPassword" type="password" value={form.newPassword} onChange={change} required
           autoComplete="new-password" hint="8~64자, 영문과 숫자를 포함해 주세요." error={state.fieldErrors.newPassword} />
         <FormField label="새 비밀번호 확인" name="newPasswordConfirm" type="password" value={form.newPasswordConfirm} onChange={change} required
           autoComplete="new-password" error={state.fieldErrors.newPasswordConfirm} />
         <Feedback state={state} />
         <button type="submit" disabled={state.busy} className="rounded-md bg-indigo-600 px-4 py-2 text-sm text-white disabled:opacity-50">
-          비밀번호 변경
+          {passwordSet ? '비밀번호 변경' : '비밀번호 만들기'}
         </button>
       </form>
     </Card>
   )
 }
 
-function WithdrawForm({ onDone }) {
+function WithdrawForm({ onDone, passwordSet, username }) {
   const [password, setPassword] = useState('')
   const [state, submit] = useSubmit()
   return (
@@ -189,11 +204,16 @@ function WithdrawForm({ onDone }) {
         onSubmit={async (e) => {
           e.preventDefault()
           if (!window.confirm('정말 탈퇴할까요? 되돌릴 수 없어요.')) return
-          if (await submit(() => withdraw(password), '')) onDone()
+          if (await submit(() => withdraw(passwordSet ? { password } : { username: password }), '')) onDone()
         }}
       >
-        <FormField label="비밀번호 확인" name="withdrawPassword" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-          required autoComplete="current-password" />
+        {passwordSet ? (
+          <FormField label="비밀번호 확인" name="withdrawPassword" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+            required autoComplete="current-password" />
+        ) : (
+          <FormField label={`확인을 위해 내 아이디(${username})를 입력해 주세요`} name="withdrawUsername" value={password}
+            onChange={(e) => setPassword(e.target.value)} required autoComplete="off" />
+        )}
         <Feedback state={state} />
         <button type="submit" disabled={state.busy} className="rounded-md bg-red-600 px-4 py-2 text-sm text-white disabled:opacity-50">
           탈퇴하기
