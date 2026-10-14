@@ -9,6 +9,15 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-14
+
+### 추가
+- 문서: `ci.yml` 분석 가이드 `docs/guide/CI-테스트-자동화.md`
+
+### 변경
+- 📚 문서를 별도 저장소 [own-log/ownlog-docs](https://github.com/own-log/ownlog-docs)로 옮겼어요. 문서만 고쳐도 배포가 돌던 문제를 막아요 (README 링크도 새 주소로)
+- 화면 점검(`e2e/`)만 바꾸면 배포하지 않아요 (운영 이미지에 들어가지 않는 파일)
+
 ## [1.2.0] - 2026-10-13
 
 ### 추가
@@ -127,7 +136,9 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 - 기획(요구사항 명세), ERD, API 명세서 (2026-10-01 ~ 10-06)
 - 백엔드 REST API 38개 (Spring Boot 4.1, JWT, Flyway), 통합·동시성·롤백 테스트 121개
 
-[Unreleased]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.1.0...develop
+[Unreleased]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.2.1...develop
+[1.2.1]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v0.6.0...v1.0.0

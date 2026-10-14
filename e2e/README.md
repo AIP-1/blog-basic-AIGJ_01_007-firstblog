@@ -25,7 +25,7 @@ Playwright 같은 추가 설치 없이 Chrome DevTools Protocol(`cdp.mjs`)로 �
 ```bash
 BASE=https://ownlog.java21.net node e2e/rehearsal.mjs
 ```
-발표 동선([docs/발표-리허설.md](../docs/발표-리허설.md))을 실제 서버에서 순서대로 따라가며 단계마다 걸린 시간과 스크린샷(`screenshots/rehearsal-*.png`)을 남겨요. 글을 쓰거나 지우지 않아요.
+발표 동선([docs/발표-리허설.md](https://github.com/own-log/ownlog-docs/blob/main/docs/발표-리허설.md))을 실제 서버에서 순서대로 따라가며 단계마다 걸린 시간과 스크린샷(`screenshots/rehearsal-*.png`)을 남겨요. 글을 쓰거나 지우지 않아요.
 
 ## 실행
 
