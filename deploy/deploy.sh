@@ -3,7 +3,7 @@
 # 필요한 환경변수: IMAGE_TAG, APP_PORT, DB_ADDRESS, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD, DB_SCHEMA, JWT_SECRET
 # 있으면 쓰는 값: OAUTH_{GITHUB,GOOGLE,KAKAO,NAVER}_CLIENT_{ID,SECRET} (소셜 로그인, 없으면 그 버튼만 숨겨요)
 #
-# 무중단 배포 (블루-그린) — 자세한 설명: docs/guide/배포와-CI-CD.md
+# 무중단 배포 (블루-그린) — 자세한 설명: 문서 저장소 ownlog-docs의 docs/guide/배포와-CI-CD.md
 #
 #   공용 Nginx ──▶ :APP_PORT  [ownlog-proxy: 우리 전용 Nginx 컨테이너]
 #                                 │ 지금 활성인 색으로만 보내요

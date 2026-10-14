@@ -28,7 +28,9 @@
 - `backend/src/main/java/com/ownlog/` 기능별 패키지: auth, user, blog, category, post, tag, topic, comment, reaction, report, image, link, universe, global
 - `frontend/src/` api, auth, components, hooks, pages, utils
 - `e2e/` 화면 점검, `scripts/seed-demo.mjs` 시연 데이터, `deploy/deploy.sh` 서버 실행 스크립트
-- 문서(코드와 함께 갱신): `요구사항.md`, `docs/ERD.md`, `docs/API명세서.md`, `docs/기록유니버스-설계.md`, `README.md`, `CHANGELOG.md`, `docs/트러블슈팅.md`
+- 이 저장소의 문서: `README.md`, `CHANGELOG.md`, `CLAUDE.md`, `e2e/README.md`
+- **설계·운영 문서는 별도 저장소** [own-log/ownlog-docs](https://github.com/own-log/ownlog-docs) (`main` 하나, 배포 없음): `요구사항.md`, `docs/ERD.md`, `docs/API명세서.md`, `docs/기록유니버스-설계.md`, `docs/트러블슈팅.md`, `docs/guide/`. 문서만 고쳐도 배포가 돌지 않게 나눴어요. 로컬 경로는 `../ownlog-docs` (없으면 clone)
+- 코드 작업과 함께 문서 저장소도 갱신해요. 문서 커밋 메시지에 코드 쪽 브랜치를 적어요
 
 **새 기능 전에 먼저 읽을 것:** 관련 엔티티와 `V*.sql`, `PostCardQueries`(공개 조건), 같은 영역의 기존 서비스·컴포넌트, API 명세의 해당 장. 비슷한 코드가 있으면 재사용하고 중복을 만들지 않아요.
 
@@ -49,12 +51,12 @@
 
 **하지 않아요**
 - 비밀값(DB·SSH 비밀번호, JWT 비밀키)을 코드·커밋·채팅에 쓰기. 비밀값은 `.env`(커밋 금지)와 GitHub Secrets에만 있어요
-- 배포 설명서 PDF(`docs/서버 배포 설명서*.pdf`) 커밋
+- 배포 설명서 PDF(`docs/서버 배포 설명서*.pdf`, 로컬에만 있음) 커밋
 - 서버에서 `docker run`으로 다른 포트 쓰기 (내 포트는 **8360~8369**)
 - `main`·`develop`에 직접 커밋, force push, 공유 브랜치 rebase, 기존 이력 다시 쓰기(amend·reset 후 푸시)
 
 ## 6. 코드 규칙
-### API (명세: `docs/API명세서.md`)
+### API (명세: 문서 저장소의 `docs/API명세서.md`)
 - **API First**: 새 API는 명세서에 요청·응답·에러를 먼저 적고 구현해요.
 - **응답 규격(바꾸지 않아요):** 성공은 DTO를 **본문 그대로**(감싸지 않음), 목록은 `PageResponse`(page는 1부터, size 기본 12·최대 50), 생성 201, 삭제 204.
 - **에러 규격:** `{ "code", "message", "fieldErrors": [] }`. `ErrorCode` enum에 코드를 추가하고 `BusinessException`으로 던져요. `GlobalExceptionHandler`가 바꿔 줘요. 메시지는 사용자에게 바로 보여줄 해요체 문장이고 내부 정보를 넣지 않아요.
@@ -81,9 +83,9 @@
 1. 백엔드 통합 테스트: 정상 + **권한(남의 것·비공개·비로그인)** + 경계값·실패 케이스. `./gradlew test` 전체 통과
 2. `npm run lint`(경고 0), `npm run build`
 3. 화면 변경이면 `e2e/`에 점검을 추가하거나 갱신하고 실행(시연 DB를 더럽히면 안 되면 `e2e/README.md`의 별도 스키마 방법)
-4. 문서 동기화: 요구사항(ID·변경 이력), ERD, API 명세, 필요하면 README·설계서
+4. 문서 동기화: 문서 저장소(ownlog-docs)의 요구사항(ID·변경 이력), ERD, API 명세, 필요하면 설계서 → 문서 저장소 `main`에 커밋·푸시. README는 이 저장소
 5. `CHANGELOG.md`의 `[Unreleased]`에 사용자 관점으로 한 줄씩 추가 (추가·변경·수정·보안·삭제)
-6. 의미 있는 문제를 풀었다면 `docs/트러블슈팅.md`에 사례 추가 (12장)
+6. 의미 있는 문제를 풀었다면 문서 저장소의 `docs/트러블슈팅.md`에 사례 추가 (12장)
 7. 작업 브랜치에서 커밋(11장 형식) → `develop`에 `--no-ff` 병합 → 푸시
 
 ## 8. 기능을 마친 뒤 점검 루틴
@@ -109,7 +111,7 @@ docker exec ownlog-postgres psql -U ownlog -d ownlog   # 로컬 DB 접속
 - `main` 푸시(= release·hotfix 병합) → GitHub Actions `deploy.yml`(테스트 → Docker 이미지 → scp → `deploy/deploy.sh`). `*.md`, `docs/`, `scripts/`만 바뀌면 배포하지 않아요.
 - `develop`·작업 브랜치 푸시와 PR → `ci.yml`(테스트만, 배포 없음).
 - 서버: `s2.java21.net`(SSH 8822), 공용 Nginx → **8360**(우리 프록시 `ownlog-proxy`) → `ownlog-blue`(8361) / `ownlog-green`(8362) **블루-그린 무중단 배포**. 컨테이너는 `--network host`(Docker 기본 네트워크로는 내부망 DB에 못 가요), 업로드는 `~/ownlog-uploads`, 활성 색은 `~/ownlog-deploy/active-color`.
-- 마이그레이션은 배포 중 예전 버전과 공존하도록 **추가만** 해요 (컬럼 삭제·이름 변경은 다음 릴리스에서, `docs/guide/배포와-CI-CD.md` 4.4).
+- 마이그레이션은 배포 중 예전 버전과 공존하도록 **추가만** 해요 (컬럼 삭제·이름 변경은 다음 릴리스에서, 문서 저장소 `docs/guide/배포와-CI-CD.md` 4.4).
 - `deploy.sh`는 시작 전에 DB 연결을 확인하고, 실패하면 원인(Caused by)을 보여줘요. 배포 결과는 Actions 화면이나 `https://ownlog.java21.net/api/topics`로 확인해요.
 - Nginx 설정(`~/nginx/ownlog.java21.net.conf`)을 바꾸면 강사님께 반영을 요청해야 해요.
 
@@ -158,7 +160,7 @@ Co-Authored-By: ...
 `hotfix/X.Y.(Z+1)`을 `main`에서 만들어 고치고 → 회귀 테스트 → `main` 병합·태그 → `develop`에도 병합.
 
 ## 12. 트러블슈팅 기록 (계속 쌓아요)
-- 버그·장애·예상과 다른 동작을 **원인까지 분석해서** 해결했다면, 작업을 마칠 때 `docs/트러블슈팅.md`에 사례를 추가해요. 오타나 단순 실수는 제외해요.
+- 버그·장애·예상과 다른 동작을 **원인까지 분석해서** 해결했다면, 작업을 마칠 때 문서 저장소의 `docs/트러블슈팅.md`에 사례를 추가해요. 오타나 단순 실수는 제외해요.
 - 형식: **상황 → 원인 분석 → 해결(코드) → 결과(테스트·수치) → 배운 점**. 맨 위 "한눈에 보기" 표에도 한 줄을 추가해요.
 - **실제로 겪은 것만** 써요. 미리 막은 문제는 "설계 단계에서 차단"이라고 밝히고, 추정은 추정이라고 써요.
 - 릴리스할 때 이번 버전에서 추가한 트러블슈팅 사례를 CHANGELOG에서 언급해요.

@@ -114,7 +114,7 @@ class RelatednessTest {
 
     /**
      * 시연 데이터(scripts/seed-demo.mjs)의 서비스 전체 우주(/api/universe)와 같은 글 24개로 예전 방식과 비교해요.
-     * 숫자는 설명서(docs/guide/기록-우주-연관도.md) "트러블슈팅" 결과에 적었어요.
+     * 숫자는 설명서(문서 저장소 ownlog-docs의 docs/guide/기록-우주-연관도.md) "트러블슈팅" 결과에 적었어요.
      */
     @Test
     @DisplayName("시연 데이터: 태그 하나만 같아도 잇던 예전 방식보다 선이 줄고, 흔한 태그 하나뿐인 쌍은 빠진다")
