@@ -23,7 +23,7 @@ ownlog:
     access-token-validity: 2h # U-03
   upload:
     dir: ${UPLOAD_DIR:./uploads}
-  # 소셜 로그인 (U-09). 키가 비어 있는 서비스는 꺼지고 그 버튼도 보이지 않아요 (docs/guide/소셜-로그인.md)
+  # 소셜 로그인 (U-09). 키가 비어 있는 서비스는 꺼지고 그 버튼도 보이지 않아요 (문서 저장소 ownlog-docs의 docs/guide/소셜-로그인.md)
   oauth:
     public-url: ${PUBLIC_URL:}
     clients:

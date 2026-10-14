@@ -7,7 +7,7 @@
 
 ## ✨ 독창 기능: 기록 유니버스
 
-> **"기록이 시간과 연결로 자라는 블로그"**. 글이 목록으로 쌓이기만 하는 대신, 시간 축과 연결 축으로 이어져요. ([설계서](docs/기록유니버스-설계.md))
+> **"기록이 시간과 연결로 자라는 블로그"**. 글이 목록으로 쌓이기만 하는 대신, 시간 축과 연결 축으로 이어져요. ([설계서](https://github.com/own-log/ownlog-docs/blob/main/docs/기록유니버스-설계.md))
 
 | 기능 | 내용 |
 |---|---|
@@ -60,24 +60,24 @@
 ├── deploy/deploy.sh          서버에서 실행하는 블루-그린 무중단 배포 스크립트
 ├── .github/workflows/        자동 배포 (GitHub Actions)
 ├── Dockerfile                화면 + API를 이미지 하나로 빌드
-├── docker-compose.yml        로컬 개발용 PostgreSQL
-├── 요구사항.md               요구사항 명세서
-└── docs/                     ERD.md, API명세서.md, 기록유니버스-설계.md, guide/(개념 가이드 8종)
+└── docker-compose.yml        로컬 개발용 PostgreSQL
 ```
 
 ## 문서
 
-- [요구사항 명세서](요구사항.md)
-- [ERD](docs/ERD.md)
-- [API 명세서](docs/API명세서.md)
-- [기록 유니버스 설계서](docs/기록유니버스-설계.md)
-- [발표 리허설](docs/발표-리허설.md)
-- [전체 코드 점검 보고서](docs/점검-보고서.md)
-- [트러블슈팅 기록](docs/트러블슈팅.md): 실제로 겪은 문제 19가지의 원인 분석과 해결
-- **[개념 가이드](docs/guide/README.md)**: 처음 보는 사람을 위해 개념부터 설명해요
-  - [개발환경](docs/guide/개발환경.md) · [Git 브랜치와 버전관리](docs/guide/git-브랜치와-버전관리.md) · [GitHub Organization과 README](docs/guide/github-organization과-readme.md)
-  - [CI 테스트 자동화(ci.yml)](docs/guide/CI-테스트-자동화.md) · [배포와 CI/CD·무중단 배포](docs/guide/배포와-CI-CD.md) · [파일 업로드](docs/guide/파일-업로드.md) · [소셜 로그인](docs/guide/소셜-로그인.md) · [기록 우주 연관도](docs/guide/기록-우주-연관도.md)
-- [포트폴리오 초안](docs/포트폴리오.md) · [기술 면접 예상 질문 50](docs/면접-예상질문.md)
+문서는 별도 저장소 **[own-log/ownlog-docs](https://github.com/own-log/ownlog-docs)** 에 있어요. 문서만 고쳐도 배포가 돌지 않도록 코드와 나눴어요.
+
+- [요구사항 명세서](https://github.com/own-log/ownlog-docs/blob/main/요구사항.md)
+- [ERD](https://github.com/own-log/ownlog-docs/blob/main/docs/ERD.md)
+- [API 명세서](https://github.com/own-log/ownlog-docs/blob/main/docs/API명세서.md)
+- [기록 유니버스 설계서](https://github.com/own-log/ownlog-docs/blob/main/docs/기록유니버스-설계.md)
+- [발표 리허설](https://github.com/own-log/ownlog-docs/blob/main/docs/발표-리허설.md)
+- [전체 코드 점검 보고서](https://github.com/own-log/ownlog-docs/blob/main/docs/점검-보고서.md)
+- [트러블슈팅 기록](https://github.com/own-log/ownlog-docs/blob/main/docs/트러블슈팅.md): 실제로 겪은 문제 19가지의 원인 분석과 해결
+- **[개념 가이드](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/README.md)**: 처음 보는 사람을 위해 개념부터 설명해요
+  - [개발환경](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/개발환경.md) · [Git 브랜치와 버전관리](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/git-브랜치와-버전관리.md) · [GitHub Organization과 README](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/github-organization과-readme.md)
+  - [CI 테스트 자동화(ci.yml)](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/CI-테스트-자동화.md) · [배포와 CI/CD·무중단 배포](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/배포와-CI-CD.md) · [파일 업로드](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/파일-업로드.md) · [소셜 로그인](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/소셜-로그인.md) · [기록 우주 연관도](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/기록-우주-연관도.md)
+- [포트폴리오 초안](https://github.com/own-log/ownlog-docs/blob/main/docs/포트폴리오.md) · [기술 면접 예상 질문 50](https://github.com/own-log/ownlog-docs/blob/main/docs/면접-예상질문.md)
 
 ## 로컬에서 실행하기
 
@@ -145,7 +145,7 @@ push → 테스트(백엔드 테스트, 프론트 린트·빌드)
      → 공용 Nginx(ownlog.java21.net) → 우리 프록시(8360) → blue(8361) 또는 green(8362)
 ```
 
-- **무중단 배포(블루-그린)예요.** 새 버전이 응답할 때만 전환해서, 배포 중에도 요청이 끊기지 않고 새 버전이 못 뜨면 예전 버전이 계속 서비스해요. ([자세히](docs/guide/배포와-CI-CD.md))
+- **무중단 배포(블루-그린)예요.** 새 버전이 응답할 때만 전환해서, 배포 중에도 요청이 끊기지 않고 새 버전이 못 뜨면 예전 버전이 계속 서비스해요. ([자세히](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/배포와-CI-CD.md))
 
 - **이미지 하나로 배포해요.** Spring Boot가 React 빌드 결과를 함께 서빙해서 화면과 API의 주소가 같아요.
 - **테이블은 Flyway가 만들어요.** 배포 DB의 스키마는 비워 두면 돼요.
@@ -159,7 +159,7 @@ push → 테스트(백엔드 테스트, 프론트 린트·빌드)
 | `DB_ADDRESS`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `DB_SCHEMA` | 수업 DB(crowfoot) 접속 정보 |
 | `SSH_ADDRESS`, `SSH_ID`, `SSH_PASSWORD`, `SSH_PORT` | 배포 서버 접속 정보 |
 | `JWT_SECRET` (선택) | 없으면 서버에서 한 번 만들어 계속 사용해요 |
-| `OAUTH_{KAKAO,NAVER,GOOGLE,GITHUB}_CLIENT_{ID,SECRET}` (선택) | 소셜 로그인 키. 둘 다 있는 서비스만 버튼이 보여요 ([발급 방법](docs/guide/소셜-로그인.md#5-키-발급하기-직접-해야-하는-일)) |
+| `OAUTH_{KAKAO,NAVER,GOOGLE,GITHUB}_CLIENT_{ID,SECRET}` (선택) | 소셜 로그인 키. 둘 다 있는 서비스만 버튼이 보여요 ([발급 방법](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/소셜-로그인.md#5-키-발급하기-직접-해야-하는-일)) |
 
 ## 앞으로의 계획 (2차 개발)
 

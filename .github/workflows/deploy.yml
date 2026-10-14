@@ -73,7 +73,7 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_SCHEMA: ${{ secrets.DB_SCHEMA }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          # 소셜 로그인 (선택): 등록하지 않은 서비스는 값이 비어서 그 로그인 버튼만 숨겨져요 (docs/guide/소셜-로그인.md)
+          # 소셜 로그인 (선택): 등록하지 않은 서비스는 값이 비어서 그 로그인 버튼만 숨겨져요 (문서 저장소 ownlog-docs의 docs/guide/소셜-로그인.md)
           OAUTH_GITHUB_CLIENT_ID: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
           OAUTH_GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
           OAUTH_GOOGLE_CLIENT_ID: ${{ secrets.OAUTH_GOOGLE_CLIENT_ID }}
