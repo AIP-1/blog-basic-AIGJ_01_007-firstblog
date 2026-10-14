@@ -5,10 +5,11 @@ name: Deploy
 on:
   push:
     branches: [main]
-    paths-ignore:      # 문서만 바뀌면 배포하지 않아요
+    paths-ignore:      # 문서·화면 점검·시연 스크립트만 바뀌면 배포하지 않아요 (운영 이미지에 들어가지 않는 파일)
       - "**.md"
       - "docs/**"
       - "scripts/**"
+      - "e2e/**"
   workflow_dispatch:   # Actions 화면에서 직접 실행할 수도 있어요
 
 env:
