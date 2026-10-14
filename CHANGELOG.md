@@ -9,6 +9,8 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-14
+
 ### 추가
 - 문서: `ci.yml` 분석 가이드 `docs/guide/CI-테스트-자동화.md`
 
@@ -134,7 +136,9 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 - 기획(요구사항 명세), ERD, API 명세서 (2026-10-01 ~ 10-06)
 - 백엔드 REST API 38개 (Spring Boot 4.1, JWT, Flyway), 통합·동시성·롤백 테스트 121개
 
-[Unreleased]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.1.0...develop
+[Unreleased]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.2.1...develop
+[1.2.1]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/AIP-1/blog-basic-AIGJ_01_007-firstblog/compare/v0.6.0...v1.0.0
