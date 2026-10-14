@@ -73,7 +73,7 @@
 - [기록 유니버스 설계서](https://github.com/own-log/ownlog-docs/blob/main/docs/기록유니버스-설계.md)
 - [발표 리허설](https://github.com/own-log/ownlog-docs/blob/main/docs/발표-리허설.md)
 - [전체 코드 점검 보고서](https://github.com/own-log/ownlog-docs/blob/main/docs/점검-보고서.md)
-- [트러블슈팅 기록](https://github.com/own-log/ownlog-docs/blob/main/docs/트러블슈팅.md): 실제로 겪은 문제 19가지의 원인 분석과 해결
+- [트러블슈팅 기록](https://github.com/own-log/ownlog-docs/blob/main/docs/트러블슈팅.md): 실제로 겪은 문제 20가지의 원인 분석과 해결
 - **[개념 가이드](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/README.md)**: 처음 보는 사람을 위해 개념부터 설명해요
   - [개발환경](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/개발환경.md) · [Git 브랜치와 버전관리](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/git-브랜치와-버전관리.md) · [GitHub Organization과 README](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/github-organization과-readme.md)
   - [CI 테스트 자동화(ci.yml)](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/CI-테스트-자동화.md) · [배포와 CI/CD·무중단 배포](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/배포와-CI-CD.md) · [파일 업로드](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/파일-업로드.md) · [소셜 로그인](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/소셜-로그인.md) · [기록 우주 연관도](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/기록-우주-연관도.md)
@@ -147,6 +147,7 @@ push → 테스트(백엔드 테스트, 프론트 린트·빌드)
 
 - **무중단 배포(블루-그린)예요.** 새 버전이 응답할 때만 전환해서, 배포 중에도 요청이 끊기지 않고 새 버전이 못 뜨면 예전 버전이 계속 서비스해요. ([자세히](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/배포와-CI-CD.md))
 
+- **문서·화면 점검만 바뀌면 배포하지 않아요.** `*.md`, `docs/`, `scripts/`, `e2e/`는 배포 대상에서 빠지고, 설계 문서는 별도 저장소([ownlog-docs](https://github.com/own-log/ownlog-docs))에 있어요.
 - **이미지 하나로 배포해요.** Spring Boot가 React 빌드 결과를 함께 서빙해서 화면과 API의 주소가 같아요.
 - **테이블은 Flyway가 만들어요.** 배포 DB의 스키마는 비워 두면 돼요.
 - **업로드한 이미지는 서버의 `~/ownlog-uploads`에 보관해요.** 새로 배포해도 남아요.

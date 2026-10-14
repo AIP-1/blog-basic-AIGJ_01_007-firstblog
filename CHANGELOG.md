@@ -9,6 +9,9 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+### 추가
+- 문서: 트러블슈팅 20번(문서만 고쳤는데 배포가 돎), own-log 조직 구성(.github 프로필·fork·문서 저장소) 안내 — [ownlog-docs](https://github.com/own-log/ownlog-docs)
+
 ## [1.2.1] - 2026-10-14
 
 ### 추가
