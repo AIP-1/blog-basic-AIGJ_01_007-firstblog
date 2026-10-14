@@ -14,6 +14,7 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 
 ### 변경
 - 📚 문서를 별도 저장소 [own-log/ownlog-docs](https://github.com/own-log/ownlog-docs)로 옮겼어요. 문서만 고쳐도 배포가 돌던 문제를 막아요 (README 링크도 새 주소로)
+- 화면 점검(`e2e/`)만 바꾸면 배포하지 않아요 (운영 이미지에 들어가지 않는 파일)
 
 ## [1.2.0] - 2026-10-13
 

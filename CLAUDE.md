@@ -108,7 +108,7 @@ docker exec ownlog-postgres psql -U ownlog -d ownlog   # 로컬 DB 접속
 ```
 
 ## 10. 배포
-- `main` 푸시(= release·hotfix 병합) → GitHub Actions `deploy.yml`(테스트 → Docker 이미지 → scp → `deploy/deploy.sh`). `*.md`, `docs/`, `scripts/`만 바뀌면 배포하지 않아요.
+- `main` 푸시(= release·hotfix 병합) → GitHub Actions `deploy.yml`(테스트 → Docker 이미지 → scp → `deploy/deploy.sh`). `*.md`, `docs/`, `scripts/`, `e2e/`만 바뀌면 배포하지 않아요.
 - `develop`·작업 브랜치 푸시와 PR → `ci.yml`(테스트만, 배포 없음).
 - 서버: `s2.java21.net`(SSH 8822), 공용 Nginx → **8360**(우리 프록시 `ownlog-proxy`) → `ownlog-blue`(8361) / `ownlog-green`(8362) **블루-그린 무중단 배포**. 컨테이너는 `--network host`(Docker 기본 네트워크로는 내부망 DB에 못 가요), 업로드는 `~/ownlog-uploads`, 활성 색은 `~/ownlog-deploy/active-color`.
 - 마이그레이션은 배포 중 예전 버전과 공존하도록 **추가만** 해요 (컬럼 삭제·이름 변경은 다음 릴리스에서, 문서 저장소 `docs/guide/배포와-CI-CD.md` 4.4).
