@@ -7,6 +7,8 @@
 - 기간: 2026-10-01 ~ 2026-10-14 (2주) · 현재 버전 **v1.2.1** ([CHANGELOG](CHANGELOG.md))
 - 스택: Java 21 · Spring Boot 4.1 · React 19 · PostgreSQL 17 · Docker · GitHub Actions
 
+> 📊 의도 → 구현 → 측정 결과, AI에게 맡긴 것과 검증한 것은 **[프로젝트 보고서](https://github.com/own-log/ownlog-docs/blob/main/docs/프로젝트-보고서.md)** 에 있어요.
+
 이 README는 **기능 목록 대신 "어떻게 만들었고, 무엇을 고민했고, 무엇이 터졌는지"** 를 보여 줘요.
 각 결정은 **🤔 생각 → ✅ 결론 → 🛠 구현** 순서로 적었어요.
 
@@ -322,6 +324,7 @@ feature         ●─●                    feature/*, fix/*, chore/* …
 
 ### 문서 ([own-log/ownlog-docs](https://github.com/own-log/ownlog-docs))
 - 설계: [요구사항](https://github.com/own-log/ownlog-docs/blob/main/요구사항.md) · [ERD](https://github.com/own-log/ownlog-docs/blob/main/docs/ERD.md) · [API 명세](https://github.com/own-log/ownlog-docs/blob/main/docs/API명세서.md) · [기록 유니버스 설계](https://github.com/own-log/ownlog-docs/blob/main/docs/기록유니버스-설계.md)
+- 보고서: [프로젝트 보고서](https://github.com/own-log/ownlog-docs/blob/main/docs/프로젝트-보고서.md)
 - 운영: [트러블슈팅](https://github.com/own-log/ownlog-docs/blob/main/docs/트러블슈팅.md) · [전체 코드 점검 보고서](https://github.com/own-log/ownlog-docs/blob/main/docs/점검-보고서.md) · [발표 리허설](https://github.com/own-log/ownlog-docs/blob/main/docs/발표-리허설.md)
 - [개념 가이드](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/README.md): [개발환경](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/개발환경.md) · [Git·버전관리](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/git-브랜치와-버전관리.md) · [CI](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/CI-테스트-자동화.md) · [배포·무중단](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/배포와-CI-CD.md) · [파일 업로드](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/파일-업로드.md) · [소셜 로그인](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/소셜-로그인.md) · [우주 연관도](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/기록-우주-연관도.md) · [GitHub Organization·README](https://github.com/own-log/ownlog-docs/blob/main/docs/guide/github-organization과-readme.md)
 - 회고: [포트폴리오 초안](https://github.com/own-log/ownlog-docs/blob/main/docs/포트폴리오.md) · [기술 면접 예상 질문 50](https://github.com/own-log/ownlog-docs/blob/main/docs/면접-예상질문.md)
