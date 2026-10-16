@@ -23,6 +23,10 @@ ownlog:
     access-token-validity: 2h # U-03
   upload:
     dir: ${UPLOAD_DIR:./uploads}
+    # 고아 파일 정리 배치 (매일 04:00 KST). grace보다 오래된, 아무도 안 쓰는 파일만 지워요 (docs/image-flow.md 6장)
+    cleanup:
+      enabled: ${IMAGE_CLEANUP_ENABLED:true}
+      grace: 24h
   # 소셜 로그인 (U-09). 키가 비어 있는 서비스는 꺼지고 그 버튼도 보이지 않아요 (문서 저장소 ownlog-docs의 docs/guide/소셜-로그인.md)
   oauth:
     public-url: ${PUBLIC_URL:}

@@ -1,5 +1,7 @@
 package com.ownlog.global.util;
 
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -9,6 +11,8 @@ public final class MarkdownText {
     private static final int SUMMARY_LENGTH = 150;
     private static final int MAX_URL_LENGTH = 500;
     private static final Pattern FIRST_IMAGE = Pattern.compile("!\\[[^\\]]*]\\(\\s*([^)\\s]+)");
+    // /uploads/ 다음부터 ), 공백, 따옴표, <, >가 나오기 전까지가 주소예요
+    private static final Pattern UPLOAD_URL = Pattern.compile("/uploads/[^)\\s\"'<>]+");
 
     private MarkdownText() {
     }
@@ -26,6 +30,18 @@ public final class MarkdownText {
         // 직접 지정한 썸네일(PostRequest)과 같은 규칙: 우리 업로드나 https만 (http·다른 스킴은 썸네일로 쓰지 않아요)
         boolean allowed = url.startsWith("/uploads/") || url.startsWith("https://");
         return allowed && url.length() <= MAX_URL_LENGTH ? url : null;
+    }
+    /** 본문에 들어 있는 우리 업로드 주소 전부 (글을 지울 때 파일도 정리하려고) */
+    public static Set<String> uploadUrls(String markdown) {
+        Set<String> urls = new java.util.LinkedHashSet<>();
+        if (markdown == null) {
+            return urls;
+        }
+        Matcher matcher = UPLOAD_URL.matcher(markdown);
+        while (matcher.find()) {
+            urls.add(matcher.group());
+        }
+        return urls;
     }
 
     /** 마크다운 문법을 걷어 내고 앞 150자. 넘으면 "…"를 붙여요 */
