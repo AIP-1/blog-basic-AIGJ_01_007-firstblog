@@ -6,6 +6,7 @@ import com.ownlog.global.error.BusinessException;
 import com.ownlog.global.error.ErrorCode;
 import com.ownlog.global.storage.ImageDeleteEvent;
 import com.ownlog.global.storage.ImageReferenceChecker;
+import com.ownlog.global.storage.UnusedImageCleaner;
 import com.ownlog.user.domain.User;
 import com.ownlog.user.dto.MeResponse;
 import com.ownlog.user.dto.PasswordChangeRequest;
@@ -28,6 +29,7 @@ public class UserService {
     private final BlogService blogService;
     private final PasswordEncoder passwordEncoder;
     private final SocialAccountRepository socialAccountRepository;
+    private final UnusedImageCleaner unusedImageCleaner;
     private final WithdrawalCleaner withdrawalCleaner;
     private final ImageReferenceChecker imageReferenceChecker;
     private final ApplicationEventPublisher eventPublisher;
@@ -80,6 +82,7 @@ public class UserService {
             throw new BusinessException(ErrorCode.WRONG_CONFIRM_USERNAME);
         }
         String oldImage = user.getProfileImageUrl();
+        var postImages = withdrawalCleaner.imageUrlsOfPosts(userId);   // ⓪ 지우기 전에 내 글의 이미지 주소
 
         withdrawalCleaner.deleteBlogsOf(userId);       // ① 내 블로그의 글(+ 딸린 것), 카테고리, 블로그
         withdrawalCleaner.deleteLikesOf(userId);       // ② 남의 글에 누른 내 좋아요 + like_count 보정
@@ -90,6 +93,7 @@ public class UserService {
         if (oldImage != null) {
             deleteImageIfUnused(oldImage, userId);                            // ⑤ 커밋 후 프로필 사진 삭제
         }
+        unusedImageCleaner.deleteIfUnused(postImages);                        // ⑥ 커밋 후 내 글 이미지 중 안 쓰는 것 삭제
     }
 
     /** 다른 회원이나 글이 같은 파일을 쓰고 있으면 지우지 않아요 (남의 파일 주소를 프로필로 넣었다가 바꾸는 경우) */
