@@ -58,7 +58,7 @@ public class OAuthLoginHandlers implements AuthenticationSuccessHandler, Authent
         response.sendRedirect(url("/login?oauthError=" + (cancelled ? "cancelled" : "failed")));
     }
 
-    /** 세션은 로그인하는 몇 초 동안 state(위조 방지 값)를 기억하는 데만 써요. 끝나면 바로 지워요 */
+    /** 로그인 중간 상태는 DB + 쿠키에 두지만(JdbcOAuth2AuthorizationRequestRepository), 혹시 만들어진 세션이 있으면 남기지 않아요 */
     private static void endSession(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session != null) {
