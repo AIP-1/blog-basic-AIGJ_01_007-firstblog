@@ -13,7 +13,13 @@ import com.jayway.jsonpath.JsonPath;
 import com.ownlog.IntegrationTest;
 import com.ownlog.user.domain.User;
 import com.ownlog.user.repository.UserRepository;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,6 +30,8 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -200,6 +208,53 @@ class SocialLoginTest extends IntegrationTest {
         mockMvc.perform(get("/api/auth/oauth/providers"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.providers").isEmpty());
+    }
+
+    @Test
+    @DisplayName("11. 동의 화면에서 취소(access_denied)하면 '취소했어요' 안내, 그 밖의 실패는 'failed'")
+    void cancelledIsDistinguished() throws Exception {
+        MockHttpServletResponse cancelled = new MockHttpServletResponse();
+        handlers.onAuthenticationFailure(new MockHttpServletRequest(), cancelled,
+                new OAuth2AuthenticationException(new OAuth2Error("access_denied")));
+        assertThat(cancelled.getRedirectedUrl()).isEqualTo("/login?oauthError=cancelled");
+
+        MockHttpServletResponse failed = new MockHttpServletResponse();
+        handlers.onAuthenticationFailure(new MockHttpServletRequest(), failed,
+                new OAuth2AuthenticationException(new OAuth2Error("authorization_request_not_found")));
+        assertThat(failed.getRedirectedUrl()).isEqualTo("/login?oauthError=failed");
+    }
+
+    @Test
+    @DisplayName("12. 같은 소셜 계정의 첫 로그인이 동시에 두 번 와도 회원은 1명 (UNIQUE 제약이 막아요)")
+    void concurrentFirstLoginCreatesOneUser() throws Exception {
+        int threads = 2;
+        CountDownLatch ready = new CountDownLatch(threads);
+        CountDownLatch go = new CountDownLatch(1);
+        List<Throwable> errors = Collections.synchronizedList(new ArrayList<>());
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        for (int i = 0; i < threads; i++) {
+            pool.submit(() -> {
+                ready.countDown();
+                try {
+                    go.await();
+                    socialLoginService.login(kakao("5555", "동시"));
+                } catch (Throwable t) {
+                    errors.add(t);   // 늦은 쪽은 UNIQUE 위반으로 실패하고 트랜잭션 전체가 롤백돼요
+                }
+            });
+        }
+        ready.await(5, TimeUnit.SECONDS);
+        go.countDown();
+        pool.shutdown();
+        assertThat(pool.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM user_social_accounts WHERE provider = 'KAKAO' AND provider_user_id = '5555'",
+                Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM users WHERE email = 'kakao_5555@social.ownlog.invalid'", Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM blogs", Integer.class)).isEqualTo(1);   // 실패한 쪽의 블로그도 롤백
+        assertThat(errors.size()).isLessThanOrEqualTo(1);
     }
 
     private String codeFor(SocialProfile profile) throws Exception {
