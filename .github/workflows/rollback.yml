@@ -35,14 +35,16 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_SCHEMA: ${{ secrets.DB_SCHEMA }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          # Secret 이름은 GOOGLE_CLIENT_ID처럼 짧은 이름 우선, 예전 OAUTH_ 이름도 받아요.
+          # 깃허브만 예외: GitHub은 GITHUB_로 시작하는 Secret 이름을 허용하지 않아서 OAUTH_GITHUB_CLIENT_ID를 써요
           OAUTH_GITHUB_CLIENT_ID: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
           OAUTH_GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
-          OAUTH_GOOGLE_CLIENT_ID: ${{ secrets.OAUTH_GOOGLE_CLIENT_ID }}
-          OAUTH_GOOGLE_CLIENT_SECRET: ${{ secrets.OAUTH_GOOGLE_CLIENT_SECRET }}
-          OAUTH_KAKAO_CLIENT_ID: ${{ secrets.OAUTH_KAKAO_CLIENT_ID }}
-          OAUTH_KAKAO_CLIENT_SECRET: ${{ secrets.OAUTH_KAKAO_CLIENT_SECRET }}
-          OAUTH_NAVER_CLIENT_ID: ${{ secrets.OAUTH_NAVER_CLIENT_ID }}
-          OAUTH_NAVER_CLIENT_SECRET: ${{ secrets.OAUTH_NAVER_CLIENT_SECRET }}
+          OAUTH_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || secrets.OAUTH_GOOGLE_CLIENT_ID }}
+          OAUTH_GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || secrets.OAUTH_GOOGLE_CLIENT_SECRET }}
+          OAUTH_KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID || secrets.OAUTH_KAKAO_CLIENT_ID }}
+          OAUTH_KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET || secrets.OAUTH_KAKAO_CLIENT_SECRET }}
+          OAUTH_NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID || secrets.OAUTH_NAVER_CLIENT_ID }}
+          OAUTH_NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET || secrets.OAUTH_NAVER_CLIENT_SECRET }}
         with:
           host: ${{ secrets.SSH_ADDRESS }}
           username: ${{ secrets.SSH_ID }}

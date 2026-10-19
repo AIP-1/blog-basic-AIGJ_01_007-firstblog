@@ -21,6 +21,9 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 ### 보안
 - 로컬 개발용 PostgreSQL 포트를 내 컴퓨터(127.0.0.1)에서만 열어요. 전에는 같은 와이파이의 다른 컴퓨터도 접속을 시도할 수 있었어요
 
+### 변경
+- 소셜 로그인 키 이름을 짧게: `GOOGLE_CLIENT_ID`·`KAKAO_CLIENT_ID`·`NAVER_CLIENT_ID` (예전 `OAUTH_…` 이름도 그대로 동작). GitHub Secrets도 같은 이름, 깃허브 로그인 키만 `OAUTH_GITHUB_CLIENT_ID` (GitHub이 `GITHUB_`로 시작하는 Secret 이름을 막아서)
+
 ### 수정
 - 로컬 개발(5173)에서 소셜 로그인 돌아올 주소가 `localhost:8080`으로 만들어지던 문제: Vite 프록시가 Host를 바꾸지 않게 고정
 - 블루-그린 배포 전환 순간에 소셜 로그인 중이던 사람이 실패하던 문제: 로그인 중간 상태(state)와 1회용 코드를 서버 메모리 대신 두 서버가 함께 쓰는 DB에 둬요 (DB V7). 시작한 브라우저 쿠키와 맞을 때만 받아서 로그인 위조는 그대로 막아요

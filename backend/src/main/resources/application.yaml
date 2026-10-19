@@ -28,18 +28,19 @@ ownlog:
       enabled: ${IMAGE_CLEANUP_ENABLED:true}
       grace: 24h
   # 소셜 로그인 (U-09). 키가 비어 있는 서비스는 꺼지고 그 버튼도 보이지 않아요 (문서 저장소 ownlog-docs의 docs/guide/소셜-로그인.md)
+  # 환경변수 이름: GOOGLE_CLIENT_ID 같은 짧은 이름을 먼저 읽고, 없으면 예전 이름 OAUTH_GOOGLE_CLIENT_ID를 읽어요
   oauth:
     public-url: ${PUBLIC_URL:}
     clients:
       kakao:
-        client-id: ${OAUTH_KAKAO_CLIENT_ID:}
-        client-secret: ${OAUTH_KAKAO_CLIENT_SECRET:}
+        client-id: ${KAKAO_CLIENT_ID:${OAUTH_KAKAO_CLIENT_ID:}}
+        client-secret: ${KAKAO_CLIENT_SECRET:${OAUTH_KAKAO_CLIENT_SECRET:}}
       naver:
-        client-id: ${OAUTH_NAVER_CLIENT_ID:}
-        client-secret: ${OAUTH_NAVER_CLIENT_SECRET:}
+        client-id: ${NAVER_CLIENT_ID:${OAUTH_NAVER_CLIENT_ID:}}
+        client-secret: ${NAVER_CLIENT_SECRET:${OAUTH_NAVER_CLIENT_SECRET:}}
       google:
-        client-id: ${OAUTH_GOOGLE_CLIENT_ID:}
-        client-secret: ${OAUTH_GOOGLE_CLIENT_SECRET:}
+        client-id: ${GOOGLE_CLIENT_ID:${OAUTH_GOOGLE_CLIENT_ID:}}
+        client-secret: ${GOOGLE_CLIENT_SECRET:${OAUTH_GOOGLE_CLIENT_SECRET:}}
       github:
-        client-id: ${OAUTH_GITHUB_CLIENT_ID:}
-        client-secret: ${OAUTH_GITHUB_CLIENT_SECRET:}
+        client-id: ${GITHUB_CLIENT_ID:${OAUTH_GITHUB_CLIENT_ID:}}
+        client-secret: ${GITHUB_CLIENT_SECRET:${OAUTH_GITHUB_CLIENT_SECRET:}}
