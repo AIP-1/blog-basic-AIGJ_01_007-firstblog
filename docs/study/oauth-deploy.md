@@ -15,6 +15,28 @@
 
 ---
 
+## 1-1. 진짜 구글 로그인 성공 기록 (2026-10-19 17:55)
+
+실제 구글 키로 로컬에서 로그인했고, DB로 확인했어요. 개인정보(이메일)는 적지 않았어요.
+
+| 확인 | 값 | 무슨 뜻 |
+|---|---|---|
+| `user_social_accounts` | `GOOGLE` 1건, 17:55:54 연결 | 구글 회원 번호(`sub`)와 OwnLog 회원이 이어졌어요 |
+| 아이디 | `google_4rzbcy` | 구글은 로그인 이름이 없어서 `서비스_무작위6자`로 만들어요 (`SocialLoginService`) |
+| 이메일 | 구글이 **확인한** 이메일 (임시 주소 아님) | 구글은 `email_verified=true`라서 그대로 써요 |
+| `password_set` | `false` | 소셜로만 가입 → 설정에서 비밀번호를 처음 만들 수 있어요 |
+| 블로그 / "미분류" | 1 / 1 | 이메일 가입과 똑같이 한 트랜잭션으로 만들어져요 |
+| `oauth_login_codes` | 0건 | 1회용 코드는 교환하는 순간 지워졌어요 (`DELETE … RETURNING`) |
+| `oauth_authorization_requests` | 끝난 로그인의 요청은 없음 | 돌아온 순간 지워졌어요. 남은 1건은 시험 중 시작만 하고 돌아오지 않은 것 (5분 뒤 만료, 다음 저장 때 정리) |
+
+### 성공하기까지 실제로 막혔던 것 (순서대로)
+1. **키 이름:** `.env`에 `GOOGLE_CLIENT_ID`로 넣었는데 앱은 `OAUTH_GOOGLE_CLIENT_ID`만 읽어서 버튼이 안 보였어요 → 앱이 **짧은 이름을 먼저, 예전 이름도** 읽게 바꿨어요 (6-3).
+2. **돌아올 주소가 8080:** 5173에서 시작했는데 `redirect_uri`가 `http://localhost:8080/...`로 만들어졌어요 → Vite 프록시 설정을 고쳤어요 (6-4).
+3. **"구글 화면까지만" 가고 돌아오지 않음:** 처음 두 번은 DB에 연결이 0건이고 시작 요청만 남아 있었어요. 서버 로그에 성공·실패 기록이 모두 없으면 **구글에서 우리 서버로 아예 돌아오지 않은 것**이에요. 계정 선택 → 계속까지 끝까지 진행하니 성공했어요.
+   - 배운 점: "구글 화면이 떴다"와 "로그인 성공"은 달라요. **DB에 연결 행이 생겼는지**로 확인해요.
+
+---
+
 ## 2. 흐름도
 
 ### 2-1. OAuth 로그인 (Authorization Code 흐름)
@@ -74,7 +96,7 @@ flowchart TD
 ### 3-2. client-secret
 - **정의:** 우리 서버가 진짜 OwnLog 서버임을 카카오에 증명하는 비밀번호. client-id는 공개돼도 되지만 secret은 서버만 알아야 해요.
 - **비유:** client-id는 가게 **간판**, secret은 가게 **도장**이에요. 간판은 누구나 보지만, 도장이 있어야 교환권을 열쇠로 바꿔 줘요.
-- **OwnLog에서는:** `${OAUTH_KAKAO_CLIENT_SECRET:}`처럼 환경변수로만 읽어요(`application.yaml:35-45`). ID·SECRET이 **둘 다** 있어야 그 서비스가 켜져요(`OAuthProperties.java:21`).
+- **OwnLog에서는:** `${GOOGLE_CLIENT_SECRET:}`처럼 환경변수로만 읽어요(`application.yaml`). 비어 있으면 예전 이름 `OAUTH_GOOGLE_CLIENT_SECRET`도 봐요(6-3). ID·SECRET이 **둘 다** 있어야 그 서비스가 켜져요(`OAuthProperties.java:21`).
 - **잘못하면:** 코드나 커밋에 넣으면 누구나 우리 서버인 척 토큰을 받아 갈 수 있어요. 새면 파일 삭제가 아니라 **재발급**해야 해요(이력에 남아 있으니까).
 - **오늘 확인:** 가짜 secret으로 실제 요청을 보내니 카카오는 `401`, 깃허브는 `404`를 돌려줬고, 우리 서버는 로그인 화면으로 돌려보냈어요.
 
@@ -104,7 +126,7 @@ flowchart TD
 |---|---|---|---|
 | **로컬 `.env`** | 내 컴퓨터 (git 제외, `.gitignore:10`) | 로컬 Spring·docker compose | 개발용 DB·JWT·(선택) OAuth 키 |
 | **`.env.example`** | git에 **공개** | 사람 (어떤 키가 필요한지 보는 양식) | 키 **이름**만, 값은 비움 |
-| **GitHub Secrets** | GitHub (값을 다시 볼 수 없음) | Actions 실행 중에만 | 운영 DB·SSH·JWT·OAuth |
+| **GitHub Secrets** | GitHub (값을 다시 볼 수 없음) | Actions 실행 중에만 | 운영 DB·SSH·JWT·OAuth (`GOOGLE_CLIENT_ID` 등, 깃허브 키만 `OAUTH_GITHUB_…`) |
 | **환경변수** | 실행 중인 프로세스 안 | Spring의 `${…}` | Secrets → `deploy.yml:76~` → `deploy.sh`의 `docker run -e 이름`(`deploy.sh:124-125`) |
 | **서버 .env** | 서버 | — | **안 써요.** 서버에는 `jwt.secret`(Secret이 없을 때만)만 있어요 |
 
@@ -162,6 +184,9 @@ flowchart TD
 | `678e033` chore | 로컬 DB 포트 제한 | 와이파이에서 공개된 비밀번호로 접속 가능했음 | `docker-compose.yml`: `"5432:5432"` → `"127.0.0.1:5432:5432"` |
 | `618aac7` chore | `.env.example`에 OAuth 키 이름 | 어떤 키를 채워야 하는지 알 수 있게 (값은 비움) | `OAUTH_{KAKAO,…}_CLIENT_{ID,SECRET}=`, `PUBLIC_URL=` |
 | `7606c84` fix | 취소 안내 분리 + 동시 첫 로그인 테스트 | 취소는 오류가 아니라 선택 | `access_denied` → `oauthError=cancelled` (`OAuthLoginHandlers.java:56-58`), `LoginPage.jsx` 문장 추가, `SocialLoginTest` 11·12번 |
+| `5225920` fix | 블루-그린 전환 중 로그인 실패 | state·1회용 코드가 서버 메모리 | V7, `JdbcOAuth2AuthorizationRequestRepository`, `OAuthLoginCodeStore`(DB·해시) |
+| `b46c448` fix | 로컬 redirect_uri 8080 | Vite 프록시가 Host를 바꿈 | `vite.config.js`: `changeOrigin: false` |
+| `ddfa456`·`0908003` feat/fix | 짧은 키 이름 + 테스트 격리 | 넣은 이름(`GOOGLE_CLIENT_ID`) 그대로 쓰기, 로컬 `.env`가 테스트에 섞임 | `application.yaml`, `OAuthClientRegistrations.withLegacyNames`, 워크플로(짧은 이름 Secret 우선), `application-test.yaml` |
 | `9fb8acb` ci | 동시 배포 막기 + 롤백 | 겹치면 컨테이너를 서로 지움, 롤백에 재빌드 필요 | `deploy.yml`: `concurrency`, `deploy.sh`: `flock`·`previous-image`·`grep -vx -e 현재 -e 직전`, 새 `rollback.yml` |
 | (커밋 없음) | 로컬 `.env` 비밀값 교체 | 예시 값과 같았음 | `.env`는 git 밖이라 커밋 대상이 아니에요. DB는 `ALTER USER`로 같은 값으로 맞춤 |
 
@@ -183,6 +208,27 @@ flowchart TD
 
 ---
 
+### 6-3. 키 이름이 달라서 구글 버튼이 안 보임
+- **문제:** `.env`·GitHub Secrets에 `GOOGLE_CLIENT_ID`로 넣었는데 버튼이 안 보임.
+- **원인:** 앱은 `OAUTH_GOOGLE_CLIENT_ID`만 읽었어요. 이름이 다르면 그냥 "키 없음"으로 보고 조용히 꺼져요(오류가 안 나서 알아채기 어려워요).
+- **해결:** 짧은 이름(`GOOGLE_CLIENT_ID`)을 먼저 읽고, 비어 있으면 예전 이름(`OAUTH_…`)을 봐요(`OAuthClientRegistrations.withLegacyNames`). 워크플로도 `secrets.GOOGLE_CLIENT_ID || secrets.OAUTH_GOOGLE_CLIENT_ID`.
+  - YAML의 `${A:${B:}}`로는 안 됐어요. **A가 빈 값으로라도 있으면 B를 보지 않아서**, `.env.example`을 복사하면(짧은 이름이 빈 값으로 생겨요) 예전 이름에 넣은 키가 무시돼요. 그래서 "비어 있지 않은 첫 값"을 코드에서 골라요.
+  - 깃허브만 예외: GitHub은 `GITHUB_`로 시작하는 Secret 이름을 막아서 `OAUTH_GITHUB_CLIENT_ID`를 써요.
+- **결과:** `.env`에 짧은 이름만 두고 `providers: ["google"]`, 테스트 `OAuthEnvNameTest`(짧은 이름과 예전 이름 둘 다).
+
+### 6-4. 로컬에서 돌아올 주소가 8080으로 만들어짐
+- **문제:** `http://localhost:5173`에서 시작했는데 구글에 보낸 `redirect_uri`가 `http://localhost:8080/login/oauth2/code/google`.
+- **원인:** 로컬은 `public-url`이 비어 있어서 `{baseUrl}`을 **요청의 Host**로 계산해요. Vite 8의 짧은 프록시 설정(`'/oauth2': 'http://localhost:8080'`)이 Host를 대상 주소(8080)로 바꿔서 넘겼어요. 주석에는 "Host를 그대로 넘겨요"라고 적혀 있었는데 실제 동작은 달랐어요.
+- **해결:** `{ target: 'http://localhost:8080', changeOrigin: false }`로 명시 (`vite.config.js`).
+- **결과:** `redirect_uri = http://localhost:5173/login/oauth2/code/google`, 실제 로그인 성공.
+- **배운 점:** 주석이 아니라 **실제로 만들어진 주소를 찍어 보고** 확인해요.
+
+### 6-5. 로컬 `.env`의 진짜 키가 테스트에 섞임 (그리고 실패한 채로 푸시함)
+- **문제:** 키 이름을 바꾼 뒤 OAuth 테스트 2개가 "키가 없으면 목록이 비어야 하는데 `google`이 있다"로 실패. 그런데 명령을 이어 붙여 실행해서 **실패한 채로 커밋·푸시**까지 됐어요(`ddfa456`).
+- **원인:** `application.yaml`이 로컬 `.env`를 읽는데, 테스트도 같은 설정을 써요. 이름이 `GOOGLE_CLIENT_ID`로 바뀌자 내 컴퓨터의 진짜 키가 테스트에 들어갔어요. CI에는 `.env`가 없어서 통과했을 거라, **내 컴퓨터에서만 다르게 동작**하는 테스트가 된 거예요.
+- **해결:** `application-test.yaml`에서 소셜 로그인 키 이름 16개를 빈 값으로. 키가 필요한 테스트는 `@TestPropertySource`로 직접 넣어요(그쪽이 우선). 다시 **전체 213개 통과를 확인한 뒤** 커밋(`0908003`).
+- **배운 점:** 테스트는 **내 컴퓨터 설정과 상관없이** 같은 결과가 나와야 해요. 그리고 "테스트 → 커밋"은 테스트 결과를 보고 나서 해야지, 한 줄로 이어 붙이면 실패해도 커밋돼요.
+
 ## 7. 직접 쳐볼 명령어 5개
 
 | # | 명령 | 예상 결과 |
@@ -194,6 +240,15 @@ flowchart TD
 | 5 | `bash -n deploy/deploy.sh && grep -n "concurrency" -A2 .github/workflows/deploy.yml` | 아무 오류 없이 `group: deploy-production`, `cancel-in-progress: false` |
 
 ---
+
+### 7-1. 로그인 한 번을 눈으로 따라가 보기 (직접 해 보기)
+1. **시작 전:** `docker exec ownlog-postgres psql -U ownlog -d ownlog -c "select count(*) from oauth_authorization_requests where expires_at > now();"`
+2. 브라우저 개발자 도구(⌥⌘I) → **네트워크** 탭 → "로그 보존" 체크 → `localhost:5173/login`에서 "구글로 계속하기"
+3. **구글 화면이 뜬 상태에서** 1번 명령을 다시 → 1건 늘어나요 (state가 DB에 저장됨)
+4. 개발자 도구 → **애플리케이션 → 쿠키 → localhost** → `OWNLOG_OAUTH_STATE` 값 = 네트워크 탭의 구글 주소 속 `state=` 값 (같은지 비교)
+5. 계정 선택 → 계속 → 네트워크 탭에서 `302`가 이어지는 것 보기: `/login/oauth2/code/google?code=…&state=…` → `/oauth/callback#code=…` → `POST /api/auth/oauth/exchange` (응답 본문에 `accessToken`)
+6. **끝난 뒤:** 1번 명령 → 다시 줄어요(한 번 쓰면 지워짐), `select count(*) from oauth_login_codes;` → 0
+7. 생각해 보기: 4번의 쿠키를 지우고 5번을 하면? → `/login?oauthError=failed` (로그인 CSRF 방어, 3-4)
 
 ## 8. 면접 예상 질문 5개
 
