@@ -34,7 +34,7 @@ public abstract class IntegrationTest {
     void cleanUpDatabase() {
         jdbcTemplate.execute("""
                 TRUNCATE users, blogs, categories, posts, tags, post_tags,
-                         comments, post_likes, bookmarks, reports
+                         comments, post_likes, bookmarks, reports, oauth_authorization_requests
                 RESTART IDENTITY CASCADE
                 """);
     }

@@ -11,7 +11,7 @@
 2. **로컬 비밀값이 공개 예시 값과 같았어요.** `.env`를 `.env.example`에서 복사한 뒤 값을 안 바꿨어요 → 로컬 DB 비밀번호·JWT 비밀키를 새로 만들고, DB 포트를 `127.0.0.1`로만 열었어요.
 3. **로그인 실패 케이스를 가짜 키로 실제 카카오·깃허브에 보내 확인했어요.** 취소, 잘못된 code, 위조 state, 세션 없음 모두 로그인 화면으로 돌아가요. 취소는 "취소했어요"로 따로 안내하게 고쳤어요.
 4. **배포는 겹칠 수 있었고, 롤백이 사실상 불가능했어요.** → Actions `concurrency` + 서버 `flock`으로 한 번에 하나만, 직전 이미지를 남겨 **Rollback 워크플로로 1~2분 안에 되돌리기**를 만들었어요.
-5. **남은 위험:** 블루-그린 전환 순간에 로그인 중이던 사람은 실패할 수 있어요(세션이 서버 메모리에 있음). 다시 누르면 되고, 고치려면 설계 결정이 필요해요.
+5. **블루-그린 전환 중 로그인 실패도 고쳤어요(같은 날 추가).** state와 1회용 코드를 서버 메모리 대신 DB(V7)에 두고, 시작한 브라우저의 쿠키와 맞을 때만 받아요. 서버 두 대(8081·8082)로 "blue에서 시작 → green으로 돌아옴"을 실제로 해 보니 통과했어요.
 
 ---
 
@@ -97,6 +97,8 @@ flowchart TD
 - **잘못하면:** state가 없으면 공격자가 **자기 code**를 피해자 브라우저에 밀어 넣어 피해자를 공격자 계정으로 로그인시킬 수 있어요(로그인 CSRF).
 - **주의 (OwnLog):** state가 **서버 메모리 세션**에 있어서(`SecurityConfig.java:79-82`에 저장소 지정 없음 = 기본 세션, spring-session 없음), 블루-그린 전환 순간 blue에서 시작하고 green으로 돌아오면 실패해요. 오늘 "세션 없이 콜백"을 보내 같은 실패를 재현했어요.
 
+- **고친 방법 (같은 날):** `JdbcOAuth2AuthorizationRequestRepository`가 요청 정보를 DB `oauth_authorization_requests`(V7)에 두고, 같은 state를 `OWNLOG_OAUTH_STATE` 쿠키(HttpOnly·SameSite=Lax)로 브라우저에 줘요. 돌아왔을 때 **주소의 state = 쿠키의 state**일 때만 DB에서 꺼내요. DB에서만 찾으면 남이 만든 state도 통과해서 로그인 CSRF가 다시 열리기 때문이에요. 1회용 코드도 DB `oauth_login_codes`에 **해시로** 두고 `DELETE … RETURNING`으로 한 번만 꺼내요.
+
 ### 3-5. 환경변수 vs GitHub Secrets vs 서버 .env
 | | 어디에 있나 | 누가 읽나 | OwnLog에서 |
 |---|---|---|---|
@@ -143,7 +145,7 @@ flowchart TD
 | OAuth | 동의 취소 응답 | "실패"와 같은 문장 | 작은 문제 | "취소했어요" 따로 (`7606c84`) |
 | OAuth | 잘못된 secret·code / 위조 state | 모두 `/login?oauthError=failed` | 없음 | 실측 (카카오 401, 깃허브 404) |
 | OAuth | 동시 첫 로그인 중복 회원 | `UNIQUE(provider, provider_user_id)` (`V6__social_login.sql:20`) | 없음 | 동시 2건 테스트 추가 → 회원·블로그 1개 |
-| OAuth | 블루-그린 중 로그인 | state·1회용 코드가 서버 메모리 | ⚠️ 드묾 | **결정 필요** (6장, 9장) |
+| OAuth | 블루-그린 중 로그인 | state·1회용 코드가 서버 메모리였음 | ⚠️ → ✅ | DB(V7) + 브라우저 쿠키 확인으로 옮김 (커밋 `fix/oauth-shared-state`) |
 | 배포 | 트리거 | main만, 문서·e2e 제외 | 없음 | — |
 | 배포 | 동시 배포 | 막는 장치 없음 | ❌ | `concurrency` + `flock` (`9fb8acb`) |
 | 배포 | Dockerfile | 멀티 스테이지, 시크릿 없음, `USER ownlog`(비 root, `Dockerfile:26`) | 없음 | — |
@@ -214,7 +216,7 @@ TLS를 앞단 Nginx에서 끝내면 앱은 http 요청을 받아서, 요청으�
 
 ## 9. 아직 모르는 것 (다음 공부 거리)
 
-- **블루-그린 + 세션:** state를 서명한 쿠키에 둘지, DB(spring-session)에 둘지, 장단점과 보안 차이.
+- **블루-그린 + 세션 (해결 후 남은 질문):** 이번엔 "DB + 쿠키 짝 맞추기"를 골랐어요. 서명한 쿠키에 통째로 두는 방식, spring-session(세션 자체를 DB에)과 비교해 보기. 서버가 여러 대로 늘어도 같은 방식이 통하는지.
 - **실제 키로 확인하지 못한 것:** `redirect_uri_mismatch`가 각 서비스에서 어떤 화면으로 보이는지, 네이버가 Callback URL을 몇 개까지 받는지 (**확인 필요**), 카카오가 secret 없이 동작하는 설정일 때의 차이.
 - **운영 JWT_SECRET:** Secrets 값은 다시 볼 수 없어서, 예시 값을 넣었는지 확인할 수 없어요. 새로 만들어 덮어쓸지 결정 필요 (덮어쓰면 모두 한 번 로그아웃).
 - **서버의 flock:** Ubuntu에 기본으로 있다고 알고 있지만 (util-linux) 우리 서버에서 직접 확인하지 못했어요 (**확인 필요**, `command -v flock`).
