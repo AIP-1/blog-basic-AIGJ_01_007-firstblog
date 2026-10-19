@@ -12,6 +12,13 @@ on:
       - "e2e/**"
   workflow_dispatch:   # Actions 화면에서 직접 실행할 수도 있어요
 
+# 연속으로 push해도 배포가 겹치지 않게 줄을 세워요 (Rollback 워크플로와 같은 그룹).
+# 진행 중인 배포는 취소하지 않아요: 중간에 끊기면 서버가 반쯤 바뀐 상태로 남을 수 있어서예요.
+# 기다리는 실행은 하나만 남고, 그 사이 새 push가 오면 오래된 대기 실행이 취소돼요 (가장 최신 커밋만 배포)
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 env:
   APP_PORT: "8360"   # 수업에서 배정받은 앱 포트 번호 (Nginx proxy_pass와 같은 값)
 

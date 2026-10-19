@@ -1,5 +1,6 @@
 package com.ownlog.global.config;
 
+import com.ownlog.auth.oauth.JdbcOAuth2AuthorizationRequestRepository;
 import com.ownlog.auth.oauth.OAuthClientRegistrations;
 import com.ownlog.auth.oauth.OAuthLoginHandlers;
 import com.ownlog.auth.oauth.OAuthProperties;
@@ -32,6 +33,7 @@ public class SecurityConfig {
     private final SecurityErrorHandler securityErrorHandler;
     private final OAuthClientRegistrations oauthClientRegistrations;
     private final OAuthLoginHandlers oauthLoginHandlers;
+    private final JdbcOAuth2AuthorizationRequestRepository oauthAuthorizationRequestRepository;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -74,10 +76,12 @@ public class SecurityConfig {
 
         // 소셜 로그인 (U-09): 키를 등록한 서비스가 하나라도 있을 때만 켜요.
         //   /oauth2/authorization/kakao → 카카오 동의 화면 → /login/oauth2/code/kakao → OAuthLoginHandlers
-        // 세션은 이 몇 초 동안 state(요청 위조 방지 값)를 기억하는 데만 쓰고, 그 뒤 인증은 지금처럼 JWT예요
+        // 동의 화면에 다녀오는 동안의 요청 정보(state)는 서버 메모리 세션이 아니라 DB + 쿠키에 둬요.
+        // 블루-그린 전환 중 다른 서버로 돌아와도 이어지게 하려고요 (JdbcOAuth2AuthorizationRequestRepository, 트러블슈팅 24번)
         if (!oauthClientRegistrations.all().isEmpty()) {
             http.oauth2Login(oauth -> oauth
                     .clientRegistrationRepository(new InMemoryClientRegistrationRepository(oauthClientRegistrations.all()))
+                    .authorizationEndpoint(endpoint -> endpoint.authorizationRequestRepository(oauthAuthorizationRequestRepository))
                     .loginPage("/login")   // Spring 기본 로그인 화면을 만들지 않고 React 화면(/login)을 써요
                     .successHandler(oauthLoginHandlers)
                     .failureHandler(oauthLoginHandlers));

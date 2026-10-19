@@ -1,5 +1,8 @@
 package com.ownlog.user.repository;
 
+import com.ownlog.global.storage.UnusedImageCleaner;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -17,6 +20,16 @@ public class WithdrawalCleaner {
             "SELECT p.id FROM posts p JOIN blogs b ON b.id = p.blog_id WHERE b.user_id = ?";
 
     private final JdbcTemplate jdbcTemplate;
+
+    /** ⓪ 지우기 전에, 내 글(임시저장 포함)이 쓰던 업로드 주소를 모아요. 탈퇴가 커밋된 뒤 안 쓰는 파일을 정리하려고 */
+    public Set<String> imageUrlsOfPosts(Long userId) {
+        Set<String> urls = new LinkedHashSet<>();
+        jdbcTemplate.query("SELECT thumbnail_url, content FROM posts WHERE id IN (" + MY_POSTS + ")",
+                rs -> {
+                    urls.addAll(UnusedImageCleaner.imagesOf(rs.getString("thumbnail_url"), rs.getString("content")));
+                }, userId);
+        return urls;
+    }
 
     /** ① 내 블로그 전부 (다중 블로그가 되어도 그대로 동작해요): 글에 딸린 것 → 글 → 카테고리 → 블로그 */
     public void deleteBlogsOf(Long userId) {

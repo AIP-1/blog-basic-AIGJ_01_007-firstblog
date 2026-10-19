@@ -51,6 +51,20 @@ class OAuthRedirectTest extends IntegrationTest {
     }
 
     @Test
+    @DisplayName("5. 로그인 중간 상태는 세션이 아니라 DB + 쿠키 (블루-그린 전환 중에도 이어지게)")
+    void stateStoredInDbAndCookieNotSession() throws Exception {
+        var response = mockMvc.perform(get("/oauth2/authorization/kakao")).andReturn().getResponse();
+        // 주소 안의 state는 URL 인코딩돼 있어요 (= → %3D). 서버는 디코딩된 값으로 받아요
+        String state = java.net.URLDecoder.decode(UriComponentsBuilder.fromUriString(response.getRedirectedUrl()).build()
+                .getQueryParams().getFirst("state"), java.nio.charset.StandardCharsets.UTF_8);
+
+        assertThat(response.getCookie("OWNLOG_OAUTH_STATE").getValue()).isEqualTo(state);
+        assertThat(response.getCookie("JSESSIONID")).isNull();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM oauth_authorization_requests WHERE state = ?",
+                Integer.class, state)).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("3. 꺼진 서비스(네이버)로는 동의 화면에 가지 않아요")
     void disabledProviderDoesNotRedirect() throws Exception {
         String location = mockMvc.perform(get("/oauth2/authorization/naver"))

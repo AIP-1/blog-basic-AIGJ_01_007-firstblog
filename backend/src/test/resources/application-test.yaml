@@ -4,6 +4,8 @@ ownlog:
     secret: test-secret-key-for-ownlog-at-least-32-bytes-long
   upload:
     dir: build/test-uploads   # build 아래라서 git에 올라가지 않아요
+    cleanup:
+      enabled: false   # 정해진 시각에 도는 정리 배치는 끄고, 테스트에서는 run()을 직접 불러요
 
 # N+1 검증용: 실행된 SQL 수를 셀 수 있게 Hibernate 통계를 켜요 (테스트에서만)
 spring:

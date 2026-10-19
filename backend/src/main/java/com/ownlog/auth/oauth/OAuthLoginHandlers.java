@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -51,10 +52,13 @@ public class OAuthLoginHandlers implements AuthenticationSuccessHandler, Authent
                                         AuthenticationException exception) throws IOException {
         endSession(request);
         log.info("소셜 로그인 실패: {}", exception.getMessage());
-        response.sendRedirect(url("/login?oauthError=failed"));
+        // 동의 화면에서 '취소'를 누른 건 오류가 아니라 사용자의 선택이라, 화면에서 다른 문장으로 안내해요
+        boolean cancelled = exception instanceof OAuth2AuthenticationException oauth
+                && "access_denied".equals(oauth.getError().getErrorCode());
+        response.sendRedirect(url("/login?oauthError=" + (cancelled ? "cancelled" : "failed")));
     }
 
-    /** 세션은 로그인하는 몇 초 동안 state(위조 방지 값)를 기억하는 데만 써요. 끝나면 바로 지워요 */
+    /** 로그인 중간 상태는 DB + 쿠키에 두지만(JdbcOAuth2AuthorizationRequestRepository), 혹시 만들어진 세션이 있으면 남기지 않아요 */
     private static void endSession(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session != null) {

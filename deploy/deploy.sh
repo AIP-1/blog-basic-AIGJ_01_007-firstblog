@@ -16,10 +16,12 @@
 #   4) 남은 요청이 끝날 시간을 준 뒤 예전 색(blue)을 정상 종료해요 (Spring graceful shutdown)
 #   새 버전이 헬스 체크를 통과하지 못하면 3)으로 가지 않아서, 예전 버전이 그대로 서비스를 계속해요.
 #
-# 로컬에서 시험할 때만 쓰는 값: NETWORK=bridge(기본 host), UPSTREAM_HOST(기본 127.0.0.1), SKIP_LOAD=1, KEEP_IMAGES=1, DRAIN_SECONDS
+# 롤백: 서버에 남겨 둔 직전 이미지로 전환해요 → IMAGE_TAG=<직전 태그> SKIP_LOAD=1 (GitHub Actions의 Rollback 워크플로가 이렇게 실행해요)
+#
+# 로컬에서 시험할 때만 쓰는 값: NETWORK=bridge(기본 host), UPSTREAM_HOST(기본 127.0.0.1), SKIP_LOAD=1, KEEP_IMAGES=1, DRAIN_SECONDS, APP_NAME
 set -euo pipefail
 
-APP_NAME=ownlog
+APP_NAME="${APP_NAME:-ownlog}"   # 로컬 시험에서만 바꿔요 (내 컴퓨터의 ownlog 이미지·컨테이너를 건드리지 않게)
 DEPLOY_DIR="$HOME/ownlog-deploy"
 UPLOAD_DIR="$HOME/ownlog-uploads"   # 업로드한 이미지는 컨테이너 밖에 둬서 새로 배포해도 남아요
 PROXY_NAME="${APP_NAME}-proxy"
@@ -28,6 +30,19 @@ PROXY_IMAGE="${PROXY_IMAGE:-nginx:1.27-alpine}"
 NETWORK="${NETWORK:-host}"
 UPSTREAM_HOST="${UPSTREAM_HOST:-127.0.0.1}"
 DRAIN_SECONDS="${DRAIN_SECONDS:-10}"   # 프록시를 바꾼 뒤, 예전 버전에 남은 요청이 끝나길 기다리는 시간
+
+# 배포가 동시에 두 번 돌면 둘 다 같은 색을 골라 서로의 컨테이너를 지울 수 있어요 (Race Condition).
+# 서버에서 잠금 파일을 잡은 쪽만 진행하고, 나머지는 바로 멈춰요. 잠금은 스크립트가 끝나면 저절로 풀려요.
+mkdir -p "$DEPLOY_DIR"
+if command -v flock > /dev/null; then
+  exec 9> "$DEPLOY_DIR/deploy.lock"
+  if ! flock -n 9; then
+    echo "❌ 다른 배포가 진행 중이에요. 끝난 뒤 다시 실행해 주세요."
+    exit 1
+  fi
+else
+  echo "⚠️  flock이 없어 동시 실행 잠금 없이 진행해요 (macOS 로컬 시험)"
+fi
 
 # 비밀값이 빠졌으면 바로 멈춰요 (어떤 Secret이 비었는지 이름만 알려 줘요)
 for name in IMAGE_TAG APP_PORT DB_ADDRESS DB_PORT DB_NAME DB_USERNAME DB_PASSWORD DB_SCHEMA; do
@@ -83,6 +98,9 @@ if [ "$ACTIVE" = blue ]; then NEXT=green; else NEXT=blue; fi
 NEXT_PORT=$(port_of "$NEXT")
 NEXT_NAME="${APP_NAME}-${NEXT}"
 echo "▶ 지금 활성: ${ACTIVE:-없음} → 새 버전은 ${NEXT} (포트 ${NEXT_PORT})"
+# 지금 서비스 중인 이미지를 기억해 두면, 새 버전에 문제가 있을 때 다시 빌드하지 않고 바로 되돌릴 수 있어요
+if [ -n "$ACTIVE" ]; then CURRENT_CONTAINER="${APP_NAME}-${ACTIVE}"; else CURRENT_CONTAINER="$APP_NAME"; fi
+PREV_IMAGE="$(docker inspect -f '{{.Config.Image}}' "$CURRENT_CONTAINER" 2>/dev/null || true)"
 
 echo "▶ 새 버전 실행: ${NEXT_NAME}"
 mkdir -p "$UPLOAD_DIR" "$PROXY_DIR"
@@ -173,6 +191,10 @@ for i in $(seq 1 15); do
   sleep 1
 done
 echo "$NEXT" > "$DEPLOY_DIR/active-color"
+if [ -n "$PREV_IMAGE" ] && [ "$PREV_IMAGE" != "${APP_NAME}:${IMAGE_TAG}" ]; then
+  echo "$PREV_IMAGE" > "$DEPLOY_DIR/previous-image"   # Rollback 워크플로가 읽어요
+fi
+PREV_TAG="$(cut -d: -f2 "$DEPLOY_DIR/previous-image" 2>/dev/null || true)"
 echo "  ✅ 이제 ${NEXT}가 서비스해요"
 
 # ── 예전 버전 정리 ─────────────────────────────────────────────────────
@@ -183,7 +205,8 @@ if [ -n "$ACTIVE" ] && [ "$ACTIVE" != "$NEXT" ]; then
   docker rm "${APP_NAME}-${ACTIVE}" > /dev/null 2>&1 || true
 fi
 
-# 지금 쓰는 이미지만 남기고 예전 ownlog 이미지는 지워서 디스크를 아껴요 (KEEP_IMAGES=1이면 건너뛰어요: 내 컴퓨터에서 시험할 때)
-[ -n "${KEEP_IMAGES:-}" ] || docker images "$APP_NAME" --format '{{.Tag}}' | grep -vx "$IMAGE_TAG" | xargs -r -I{} docker rmi "${APP_NAME}:{}" > /dev/null 2>&1 || true
+# 지금 쓰는 이미지와 직전 이미지(롤백용) 두 개만 남기고 나머지는 지워서 디스크를 아껴요
+# (KEEP_IMAGES=1이면 건너뛰어요: 내 컴퓨터에서 시험할 때)
+[ -n "${KEEP_IMAGES:-}" ] || docker images "$APP_NAME" --format '{{.Tag}}' | grep -vx -e "$IMAGE_TAG" -e "${PREV_TAG:-<없음>}" | xargs -r -I{} docker rmi "${APP_NAME}:{}" > /dev/null 2>&1 || true
 rm -f "$DEPLOY_DIR/ownlog.tar.gz"
-echo "✅ 배포 완료: ${IMAGE_TAG} (${NEXT}, 포트 ${NEXT_PORT} ← 프록시 ${APP_PORT})"
+echo "✅ 배포 완료: ${IMAGE_TAG} (${NEXT}, 포트 ${NEXT_PORT} ← 프록시 ${APP_PORT}) · 롤백용 직전 이미지: ${PREV_TAG:-없음}"

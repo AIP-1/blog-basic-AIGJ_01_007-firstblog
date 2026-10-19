@@ -9,6 +9,7 @@ import com.ownlog.global.common.Visibility;
 import com.ownlog.global.error.BusinessException;
 import com.ownlog.global.error.ErrorCode;
 import com.ownlog.global.security.LoginUser;
+import com.ownlog.global.storage.UnusedImageCleaner;
 import com.ownlog.link.service.PostLinkService;
 import com.ownlog.post.domain.Post;
 import com.ownlog.post.domain.PostStatus;
@@ -22,6 +23,7 @@ import com.ownlog.post.repository.PostRepository;
 import com.ownlog.tag.service.TagService;
 import com.ownlog.user.domain.User;
 import java.time.Instant;
+import java.util.Set;
 import com.ownlog.topic.service.TopicService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -40,6 +42,7 @@ public class DraftService {
     private final TagService tagService;
     private final PostLinkService postLinkService;
     private final CapsuleRecipientResolver recipientResolver;
+    private final UnusedImageCleaner unusedImageCleaner;
 
     /** API 7.1 처음 임시저장 → 받은 id로 다음부터는 7.2를 호출해요 */
     @Transactional
@@ -58,12 +61,15 @@ public class DraftService {
     @Transactional
     public DraftSaveResponse save(Long postId, LoginUser me, DraftRequest request) {
         Post draft = getMyDraft(postId, me);
+        Set<String> before = imagesOf(draft);
         draft.saveDraft(categoryService.getCategoryForPost(draft.getBlog(), request.categoryId()),
                 topicService.getTopicOrNull(request.topicId()),
                 request.normalizedTitle(), request.content(), request.thumbnailUrl(),
                 Visibility.orPublic(request.visibility()),
                 tagService.resolveTags(request.tags()));
         postRepository.flush();   // 지금 UPDATE해야 updatedAt이 갱신돼서 "임시저장됨 (HH:mm)"이 맞아요
+        before.removeAll(imagesOf(draft));
+        unusedImageCleaner.deleteIfUnused(before);   // 다시 저장하면서 뺀 이미지 정리
         return DraftSaveResponse.from(draft);
     }
 
@@ -84,13 +90,17 @@ public class DraftService {
     /** API 7.5 삭제. 임시저장 글에는 댓글·좋아요가 달릴 수 없어서 글만 지우면 돼요 (D-06) */
     @Transactional
     public void delete(Long postId, LoginUser me) {
-        postRepository.delete(getMyDraft(postId, me));
+        Post draft = getMyDraft(postId, me);
+        Set<String> images = imagesOf(draft);
+        postRepository.delete(draft);
+        unusedImageCleaner.deleteIfUnused(images);
     }
 
     /** API 7.6 발행: 화면의 최신 내용으로 저장 + 발행을 한 트랜잭션에서 (D-05). 이번엔 제목·본문 필수 */
     @Transactional
     public PostCreateResponse publish(Long postId, LoginUser me, PostRequest request) {
         Post draft = getMyDraft(postId, me);
+        Set<String> before = imagesOf(draft);
         Instant openAt = TimeCapsulePolicy.openAtOrNull(request.openAt());
         User recipient = recipientResolver.resolve(request.recipientUsername(), openAt, me);
         draft.publishDraft(categoryService.getCategoryForPost(draft.getBlog(), request.categoryId()),
@@ -100,7 +110,13 @@ public class DraftService {
                 tagService.resolveTags(request.tags()),
                 openAt, recipient);
         postLinkService.sync(draft);
+        before.removeAll(imagesOf(draft));
+        unusedImageCleaner.deleteIfUnused(before);   // 발행하면서 뺀 이미지 정리
         return new PostCreateResponse(draft.getId(), me.username());
+    }
+
+    private static Set<String> imagesOf(Post post) {
+        return UnusedImageCleaner.imagesOf(post.getThumbnailUrl(), post.getContent());
     }
 
     /** 내 임시저장 글만. 남의 것이든 발행된 글이든 모두 404예요 */

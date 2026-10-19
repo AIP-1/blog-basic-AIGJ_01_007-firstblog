@@ -10,6 +10,7 @@ import { safeRedirect } from '../utils/safeRedirect'
 const OAUTH_ERRORS = {
   email_in_use: '이 이메일로 이미 가입한 계정이 있어요. 이메일과 비밀번호로 로그인해 주세요.',
   inactive: '탈퇴한 계정이에요.',
+  cancelled: '소셜 로그인을 취소했어요. 다른 방법으로 로그인하거나 다시 시도해 주세요.',
   failed: '소셜 로그인을 마치지 못했어요. 다시 시도해 주세요.',
 }
 
