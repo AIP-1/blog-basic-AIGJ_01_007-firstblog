@@ -172,6 +172,6 @@
 - [ ] 3. XFF 위조: IP를 찍는 테스트 엔드포인트를 만들고 `X-Forwarded-For` 위조 → 고친 뒤 비교
 - [ ] 5. HTTPS 301·HSTS: `curl -I http://…`로 http 응답 읽기, HSTS를 `max-age=300`부터 시작하는 이유
 - [ ] 6. 느린 테스트 엔드포인트로 `docker stop` 전/후 직접 비교
-- [ ] 9. `deploy.sh` 두 번 동시 실행 재현 → `flock`으로 막기
-- [ ] 2. `docker-compose.yml`을 `127.0.0.1:5432:5432`로 바꾸고 `lsof`로 확인
+- [ ] 9. `deploy.sh` 두 번 동시 실행 재현 → `flock`으로 막기 *(v1.3.0에서 `flock`이 들어갔어요. 직접 재현 실습은 아직)*
+- [x] 2. `docker-compose.yml`을 `127.0.0.1:5432:5432`로 바꾸고 `lsof`로 확인 *(2026-10-19 적용, `lsof` 결과 `127.0.0.1:5432`)*
 - [ ] 서버에서 `ss -tlnp | grep 836`, `sudo ufw status` 직접 확인

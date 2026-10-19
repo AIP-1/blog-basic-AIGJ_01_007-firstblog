@@ -9,11 +9,14 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-19
+
 ### 추가
 - 롤백: GitHub Actions의 Rollback 워크플로로 다시 빌드하지 않고 직전 버전으로 1~2분 안에 되돌려요 (서버에 직전 이미지 1개를 남겨 둬요)
 - 동시 배포 막기: 연속으로 push해도 배포가 줄을 서고(Actions concurrency), 서버에서도 잠금(flock)으로 한 번에 하나만 돌아요
 - 고아 이미지 정리: 매일 04:00(한국 시간)에 업로드한 지 24시간이 지났는데 어디에서도 쓰지 않는 파일을 지워요. 블루-그린 배포로 앱이 두 개 떠 있어도 한 곳에서만 돌아요 (`docs/image-flow.md`)
 - 문서: 트러블슈팅 20번(문서만 고쳤는데 배포가 돎), own-log 조직 구성(.github 프로필·fork·문서 저장소) 안내 — [ownlog-docs](https://github.com/own-log/ownlog-docs)
+- 문서: 트러블슈팅 21~23번(로컬 비밀값·DB 포트, 동시 배포·롤백, 이미지 고아 파일), 이미지 처리 흐름(`docs/image-flow.md`), 공부 노트(`docs/study/`), README 프로세스·문제해결 중심 재구성
 
 ### 보안
 - 로컬 개발용 PostgreSQL 포트를 내 컴퓨터(127.0.0.1)에서만 열어요. 전에는 같은 와이파이의 다른 컴퓨터도 접속을 시도할 수 있었어요
