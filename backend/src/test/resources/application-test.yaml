@@ -16,3 +16,22 @@ spring:
 logging:
   level:
     org.hibernate.engine.internal.StatisticalLoggingSessionEventListener: WARN
+
+# 내 컴퓨터의 .env(application.yaml이 읽어요)에 있는 진짜 소셜 로그인 키가 테스트에 섞이지 않게 비워요.
+# 키가 필요한 테스트는 @TestPropertySource로 직접 넣어요 (그쪽이 우선이에요)
+KAKAO_CLIENT_ID: ""
+OAUTH_KAKAO_CLIENT_ID: ""
+KAKAO_CLIENT_SECRET: ""
+OAUTH_KAKAO_CLIENT_SECRET: ""
+NAVER_CLIENT_ID: ""
+OAUTH_NAVER_CLIENT_ID: ""
+NAVER_CLIENT_SECRET: ""
+OAUTH_NAVER_CLIENT_SECRET: ""
+GOOGLE_CLIENT_ID: ""
+OAUTH_GOOGLE_CLIENT_ID: ""
+GOOGLE_CLIENT_SECRET: ""
+OAUTH_GOOGLE_CLIENT_SECRET: ""
+GITHUB_CLIENT_ID: ""
+OAUTH_GITHUB_CLIENT_ID: ""
+GITHUB_CLIENT_SECRET: ""
+OAUTH_GITHUB_CLIENT_SECRET: ""

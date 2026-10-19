@@ -6,6 +6,7 @@ import org.springframework.security.config.oauth2.client.CommonOAuth2Provider;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /**
@@ -20,18 +21,34 @@ public class OAuthClientRegistrations {
 
     private final List<ClientRegistration> registrations;
 
-    public OAuthClientRegistrations(OAuthProperties properties) {
+    public OAuthClientRegistrations(OAuthProperties properties, Environment env) {
         String redirectUri = (properties.publicUrl() == null || properties.publicUrl().isBlank()
                 ? "{baseUrl}" : properties.publicUrl().replaceAll("/+$", ""))
                 + "/login/oauth2/code/{registrationId}";
         List<ClientRegistration> list = new ArrayList<>();
         for (SocialProvider provider : SocialProvider.values()) {   // 버튼 순서도 이 순서예요
-            OAuthProperties.Client client = properties.clients().get(provider.id());
-            if (client != null && client.isConfigured()) {
+            OAuthProperties.Client client = withLegacyNames(provider, properties.clients().get(provider.id()), env);
+            if (client.isConfigured()) {
                 list.add(build(provider, client, redirectUri));
             }
         }
         this.registrations = List.copyOf(list);
+    }
+
+    /**
+     * 키 이름은 GOOGLE_CLIENT_ID 같은 짧은 이름(application.yaml)이 먼저고, 비어 있으면 예전 이름 OAUTH_GOOGLE_CLIENT_ID를 봐요.
+     * YAML의 ${A:${B:}}로 쓰면 A가 "빈 값"으로라도 있으면 B를 보지 않아서(.env.example을 복사하면 짧은 이름이 빈 값으로 생겨요)
+     * 예전 이름에 넣은 키가 무시됐어요. 그래서 "비어 있지 않은 첫 값"을 코드에서 골라요.
+     */
+    private static OAuthProperties.Client withLegacyNames(SocialProvider provider, OAuthProperties.Client client, Environment env) {
+        String prefix = "OAUTH_" + provider.name() + "_CLIENT_";
+        String id = firstNonBlank(client == null ? null : client.clientId(), env.getProperty(prefix + "ID"));
+        String secret = firstNonBlank(client == null ? null : client.clientSecret(), env.getProperty(prefix + "SECRET"));
+        return new OAuthProperties.Client(id, secret);
+    }
+
+    private static String firstNonBlank(String first, String second) {
+        return first != null && !first.isBlank() ? first : second;
     }
 
     public List<ClientRegistration> all() {
