@@ -12,6 +12,7 @@ import com.ownlog.reaction.dto.BookmarkedPostCard;
 import com.ownlog.reaction.dto.LikeResponse;
 import com.ownlog.reaction.repository.BookmarkRepository;
 import com.ownlog.reaction.repository.PostLikeRepository;
+import com.ownlog.post.domain.Post;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -69,7 +70,7 @@ public class ReactionService {
     /** 취소용: 발행된 글이면 돼요 (내 좋아요·북마크 행만 지우니 볼 수 있는지는 따지지 않아요) */
     private void getPublishedPost(Long postId) {
         postRepository.findById(postId)
-                .filter(post -> post.isPublished())
+                .filter(Post::isPublished)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
     }
 

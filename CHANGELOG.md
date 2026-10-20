@@ -9,6 +9,9 @@ OwnLog의 버전별 변경 사항이에요. 형식은 [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+### 변경
+- 코드 품질: SonarQube for IDE(SonarLint) 전체 분석 58건 중 45건 정리 — 이미지 정리 배치의 트랜잭션을 self-invocation에 기대지 않게 TransactionTemplate로 직접 열고(S2229), 테스트의 Thread.sleep을 Awaitility로, AssertJ 단언을 전용 메서드(containsEntry 등)로 바꿨어요. 남긴 13건(CSRF 비활성화 등)은 의도한 것이라 사유를 기록했어요
+
 ### 추가
 - 롤백: GitHub Actions의 Rollback 워크플로로 다시 빌드하지 않고 직전 버전으로 1~2분 안에 되돌려요 (서버에 직전 이미지 1개를 남겨 둬요)
 - 동시 배포 막기: 연속으로 push해도 배포가 줄을 서고(Actions concurrency), 서버에서도 잠금(flock)으로 한 번에 하나만 돌아요

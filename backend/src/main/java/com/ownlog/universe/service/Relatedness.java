@@ -241,7 +241,7 @@ public final class Relatedness {
                 double cosine = dot[k] == 0 ? 0 : dot[k] / (norm[i] * norm[j]);
                 double shared = tagShared[k];
                 double jaccard = shared == 0 ? 0 : shared / (tagSum[i] + tagSum[j] - shared);
-                double score = Math.min(1, Math.max(cosine, jaccard));
+                double score = Math.clamp(Math.max(cosine, jaccard), 0.0, 1.0);
                 if (score >= options.minScore() && !skip.contains(Key.of(docs.get(i).id(), docs.get(j).id()))) {
                     candidates.add(new Candidate(i, j, score));
                 }
@@ -274,7 +274,7 @@ public final class Relatedness {
             int j = c.j();
             List<String> tags = tagKeys.get(i).stream()
                     .filter(key -> tagKeys.get(j).contains(key) && tagDf.get(key) <= commonLimit)
-                    .sorted(Comparator.comparingInt((String key) -> tagDf.get(key)).thenComparing(key -> key))
+                    .sorted(Comparator.comparingInt((String key) -> tagDf.get(key)).thenComparing(Comparator.naturalOrder()))
                     .limit(MAX_REASON_TAGS)
                     .map(tagName::get)
                     .toList();

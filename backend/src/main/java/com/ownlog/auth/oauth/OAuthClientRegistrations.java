@@ -7,6 +7,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 /**
  * 키가 들어 있는 서비스만 골라서 OAuth2 "클라이언트 등록 정보"를 만들어요.
@@ -22,7 +23,7 @@ public class OAuthClientRegistrations {
 
     public OAuthClientRegistrations(OAuthProperties properties) {
         String redirectUri = (properties.publicUrl() == null || properties.publicUrl().isBlank()
-                ? "{baseUrl}" : properties.publicUrl().replaceAll("/+$", ""))
+                ? "{baseUrl}" : StringUtils.trimTrailingCharacter(properties.publicUrl(), '/'))
                 + "/login/oauth2/code/{registrationId}";
         List<ClientRegistration> list = new ArrayList<>();
         for (SocialProvider provider : SocialProvider.values()) {   // 버튼 순서도 이 순서예요

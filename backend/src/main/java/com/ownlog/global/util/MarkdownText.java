@@ -33,7 +33,7 @@ public final class MarkdownText {
     }
     /** 본문에 들어 있는 우리 업로드 주소 전부 (글을 지울 때 파일도 정리하려고) */
     public static Set<String> uploadUrls(String markdown) {
-        Set<String> urls = new java.util.LinkedHashSet<>();
+        Set<String> urls = new LinkedHashSet<>();
         if (markdown == null) {
             return urls;
         }

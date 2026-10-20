@@ -14,6 +14,7 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 /**
  * 소셜 로그인의 마지막 단계. 서비스에서 돌아오면(/login/oauth2/code/kakao 등) Spring이 토큰·회원 정보를 받아 오고,
@@ -68,6 +69,6 @@ public class OAuthLoginHandlers implements AuthenticationSuccessHandler, Authent
 
     private String url(String path) {
         String base = properties.publicUrl();
-        return base == null || base.isBlank() ? path : base.replaceAll("/+$", "") + path;
+        return base == null || base.isBlank() ? path : StringUtils.trimTrailingCharacter(base, '/') + path;
     }
 }

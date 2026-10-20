@@ -13,6 +13,9 @@ import java.util.Map;
 public record SocialProfile(SocialProvider provider, String providerUserId, String email, String nickname,
                             String usernameHint) {
 
+    private static final String EMAIL = "email";
+    private static final String NICKNAME = "nickname";
+
     /** 서비스별 응답 → SocialProfile. 회원 번호가 없으면 IllegalArgumentException */
     public static SocialProfile from(SocialProvider provider, Map<String, Object> attributes) {
         return switch (provider) {
@@ -20,18 +23,18 @@ public record SocialProfile(SocialProvider provider, String providerUserId, Stri
                 Map<String, Object> account = map(attributes.get("kakao_account"));
                 Map<String, Object> profile = map(account.get("profile"));
                 Map<String, Object> properties = map(attributes.get("properties"));
-                String email = Boolean.TRUE.equals(account.get("is_email_verified")) ? str(account.get("email")) : null;
-                String nickname = firstNonBlank(str(profile.get("nickname")), str(properties.get("nickname")));
+                String email = Boolean.TRUE.equals(account.get("is_email_verified")) ? str(account.get(EMAIL)) : null;
+                String nickname = firstNonBlank(str(profile.get(NICKNAME)), str(properties.get(NICKNAME)));
                 yield of(provider, attributes.get("id"), email, nickname, null);
             }
             case NAVER -> {
                 Map<String, Object> response = map(attributes.get("response"));
                 // 네이버 이메일은 네이버가 확인한 연락처 이메일이에요
-                yield of(provider, response.get("id"), str(response.get("email")),
-                        firstNonBlank(str(response.get("nickname")), str(response.get("name"))), null);
+                yield of(provider, response.get("id"), str(response.get(EMAIL)),
+                        firstNonBlank(str(response.get(NICKNAME)), str(response.get("name"))), null);
             }
             case GOOGLE -> of(provider, attributes.get("sub"),
-                    Boolean.TRUE.equals(attributes.get("email_verified")) ? str(attributes.get("email")) : null,
+                    Boolean.TRUE.equals(attributes.get("email_verified")) ? str(attributes.get(EMAIL)) : null,
                     str(attributes.get("name")), null);
             // 깃허브는 공개 이메일만 와요. 확인 여부를 알 수 없어서 쓰지 않아요
             case GITHUB -> of(provider, attributes.get("id"), null,
