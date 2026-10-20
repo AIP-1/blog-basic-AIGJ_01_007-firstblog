@@ -86,8 +86,8 @@ class DraftApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.id").value(draftId));
 
         Map<String, Object> row = postRow(draftId);
-        assertThat(row).containsEntry("title", "제목");
-        assertThat(row).containsEntry("summary", "고친 본문");
+        assertThat(row).containsEntry("title", "제목")
+                .containsEntry("summary", "고친 본문");
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM posts", Long.class)).isEqualTo(1);
     }
 

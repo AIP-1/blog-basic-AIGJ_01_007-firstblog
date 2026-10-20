@@ -274,7 +274,7 @@ public final class Relatedness {
             int j = c.j();
             List<String> tags = tagKeys.get(i).stream()
                     .filter(key -> tagKeys.get(j).contains(key) && tagDf.get(key) <= commonLimit)
-                    .sorted(Comparator.comparingInt((String key) -> tagDf.get(key)).thenComparing(Comparator.naturalOrder()))
+                    .sorted(Comparator.<String>comparingInt(tagDf::get).thenComparing(Comparator.naturalOrder()))
                     .limit(MAX_REASON_TAGS)
                     .map(tagName::get)
                     .toList();
