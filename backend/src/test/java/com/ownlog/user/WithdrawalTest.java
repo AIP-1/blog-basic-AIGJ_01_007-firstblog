@@ -144,12 +144,12 @@ class WithdrawalTest extends IntegrationTest {
         withdraw("ownlog1234").andExpect(status().isNoContent());
 
         Map<String, Object> row = jdbcTemplate.queryForMap("SELECT * FROM users WHERE id = ?", nayoung.userId());
-        assertThat(row.get("status")).isEqualTo("DELETED");
-        assertThat(row.get("email")).isEqualTo("deleted_" + nayoung.userId() + "@ownlog.invalid");
-        assertThat(row.get("nickname")).isEqualTo("탈퇴한 사용자");
+        assertThat(row).containsEntry("status", "DELETED")
+                .containsEntry("email", "deleted_" + nayoung.userId() + "@ownlog.invalid")
+                .containsEntry("nickname", "탈퇴한 사용자");
         assertThat(row.get("bio")).isNull();
         assertThat(row.get("profile_image_url")).isNull();
-        assertThat(row.get("username")).isEqualTo("nayoung");
+        assertThat(row).containsEntry("username", "nayoung");
         assertThat(row.get("deleted_at")).isNotNull();
         assertThat(PROFILE_FILE).doesNotExist();
 

@@ -69,10 +69,10 @@ class ReportApiTest extends IntegrationTest {
                 .andReturn().getResponse().getContentAsString();
 
         Map<String, Object> row = reportRow(body);
-        assertThat(row.get("post_id")).isEqualTo(postId);
+        assertThat(row).containsEntry("post_id", postId);
         assertThat(row.get("comment_id")).isNull();
-        assertThat(row.get("reporter_id")).isEqualTo(minsu.userId());
-        assertThat(row.get("status")).isEqualTo("RECEIVED");
+        assertThat(row).containsEntry("reporter_id", minsu.userId())
+                .containsEntry("status", "RECEIVED");
     }
 
     @Test
@@ -100,7 +100,7 @@ class ReportApiTest extends IntegrationTest {
         String body = reportPost(minsu, postId, "{\"reason\":\"ETC\",\"detail\":\" 다른 블로그 글을 복사했어요 \"}")
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
-        assertThat(reportRow(body).get("detail")).isEqualTo("다른 블로그 글을 복사했어요");
+        assertThat(reportRow(body)).containsEntry("detail", "다른 블로그 글을 복사했어요");
     }
 
     @Test
@@ -135,7 +135,7 @@ class ReportApiTest extends IntegrationTest {
                 .andReturn().getResponse().getContentAsString();
 
         Map<String, Object> row = reportRow(body);
-        assertThat(row.get("comment_id")).isEqualTo(commentId);
+        assertThat(row).containsEntry("comment_id", commentId);
         assertThat(row.get("post_id")).isNull();
     }
 

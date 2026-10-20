@@ -254,7 +254,7 @@ class SocialLoginTest extends IntegrationTest {
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM users WHERE email = 'kakao_5555@social.ownlog.invalid'", Integer.class)).isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM blogs", Integer.class)).isEqualTo(1);   // 실패한 쪽의 블로그도 롤백
-        assertThat(errors.size()).isLessThanOrEqualTo(1);
+        assertThat(errors).hasSizeLessThanOrEqualTo(1);
     }
 
     private String codeFor(SocialProfile profile) throws Exception {

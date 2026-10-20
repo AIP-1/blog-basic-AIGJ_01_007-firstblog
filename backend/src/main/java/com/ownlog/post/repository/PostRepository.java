@@ -29,8 +29,10 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     // 정렬은 쿼리 안에 고정하고, countQuery는 직접 적어요 (select new 쿼리의 자동 변환을 믿지 않아요).
     // ---------------------------------------------------------------------------------
 
+    String WHERE = " where ";
+
     /** 6.1 메인 최신 (토픽 필터는 선택) */
-    String MAIN_WHERE = " where " + PUBLIC_CONDITION + " and (:topicId is null or t.id = :topicId)";
+    String MAIN_WHERE = WHERE + PUBLIC_CONDITION + " and (:topicId is null or t.id = :topicId)";
 
     @Query(value = SELECT_CARD + FROM_CARD + MAIN_WHERE + LATEST,
             countQuery = COUNT + FROM_CARD + MAIN_WHERE)
@@ -44,7 +46,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Page<PostCardRow> findPopular(Long topicId, Instant since, Pageable pageable);
 
     /** 6.2 검색: 제목 또는 본문, 대소문자 무시. pattern은 서비스에서 %와 _를 이스케이프해서 넘겨요 */
-    String SEARCH_WHERE = " where " + PUBLIC_CONDITION
+    String SEARCH_WHERE = WHERE + PUBLIC_CONDITION
             + " and (lower(p.title) like :pattern escape '\\' or lower(p.content) like :pattern escape '\\')";
 
     @Query(value = SELECT_CARD + FROM_CARD + SEARCH_WHERE + LATEST,
@@ -53,7 +55,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     /** 6.3 태그 모아보기 (대소문자 무시) */
     String TAG_FROM = FROM_CARD + " join p.tags tg";
-    String TAG_WHERE = " where " + PUBLIC_CONDITION + " and lower(tg.name) = lower(:tagName)";
+    String TAG_WHERE = WHERE + PUBLIC_CONDITION + " and lower(tg.name) = lower(:tagName)";
 
     @Query(value = SELECT_CARD + TAG_FROM + TAG_WHERE + LATEST,
             countQuery = COUNT + TAG_FROM + TAG_WHERE)
@@ -109,7 +111,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<ReceivedCapsuleRow> findReceivedCapsules(Long userId);
 
     /** 12.2 최근 열린 타임캡슐: 공개 조건 + 개봉 시각이 since 이후, 최근 개봉 순 */
-    @Query(SELECT_CARD + FROM_CARD + " where " + PUBLIC_CONDITION
+    @Query(SELECT_CARD + FROM_CARD + WHERE + PUBLIC_CONDITION
             + " and p.sealedAt is not null and p.publishedAt >= :since" + LATEST)
     List<PostCardRow> findOpenedCapsules(Instant since, Pageable pageable);
 
@@ -139,7 +141,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     /** 13.2 자동완성: 다른 사람의 공개 글 (공개 조건), 제목 검색, 최신순 */
     @Query("select new com.ownlog.link.dto.LinkedPostRow(p.id, p.title, u.username, u.nickname, p.publishedAt)"
-            + FROM_CARD + " where " + PUBLIC_CONDITION
+            + FROM_CARD + WHERE + PUBLIC_CONDITION
             + " and u.id <> :userId and lower(p.title) like :pattern escape '\\'" + LATEST)
     List<LinkedPostRow> findPublicLinkCandidates(Long userId, String pattern, Pageable pageable);
 

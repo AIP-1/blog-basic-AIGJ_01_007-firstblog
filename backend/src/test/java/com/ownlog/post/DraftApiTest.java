@@ -66,10 +66,10 @@ class DraftApiTest extends IntegrationTest {
         Long draftId = ((Number) JsonPath.read(body, "$.id")).longValue();
 
         Map<String, Object> row = postRow(draftId);
-        assertThat(row.get("status")).isEqualTo("DRAFT");
+        assertThat(row).containsEntry("status", "DRAFT");
         assertThat(row.get("title")).isNull();
         assertThat(row.get("published_at")).isNull();
-        assertThat(row.get("category_id")).isEqualTo(defaultCategoryId(nayoung.blogId()));
+        assertThat(row).containsEntry("category_id", defaultCategoryId(nayoung.blogId()));
     }
 
     @Test
@@ -86,8 +86,8 @@ class DraftApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.id").value(draftId));
 
         Map<String, Object> row = postRow(draftId);
-        assertThat(row.get("title")).isEqualTo("제목");
-        assertThat(row.get("summary")).isEqualTo("고친 본문");
+        assertThat(row).containsEntry("title", "제목")
+                .containsEntry("summary", "고친 본문");
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM posts", Long.class)).isEqualTo(1);
     }
 
@@ -148,7 +148,7 @@ class DraftApiTest extends IntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors[0].field").value("title"));
 
-        assertThat(postRow(draftId).get("status")).isEqualTo("DRAFT");
+        assertThat(postRow(draftId)).containsEntry("status", "DRAFT");
     }
 
     @Test
@@ -164,7 +164,7 @@ class DraftApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.username").value("nayoung"));
 
         Map<String, Object> row = postRow(draftId);
-        assertThat(row.get("status")).isEqualTo("PUBLISHED");
+        assertThat(row).containsEntry("status", "PUBLISHED");
         assertThat(row.get("published_at")).isNotNull();
         assertThat(row.get("edited_at")).isNull();
 

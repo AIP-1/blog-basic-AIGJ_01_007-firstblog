@@ -80,16 +80,16 @@ class PostWriteApiTest extends IntegrationTest {
         Long postId = ((Number) JsonPath.read(body, "$.id")).longValue();
 
         Map<String, Object> row = postRow(postId);
-        assertThat(row.get("title")).isEqualTo("JPA 정리");
-        assertThat(row.get("status")).isEqualTo("PUBLISHED");
         assertThat(row.get("published_at")).isNotNull();
-        assertThat(row.get("category_id")).isEqualTo(defaultCategoryId(nayoung.blogId()));
         assertThat(row.get("topic_id")).isNull();
-        assertThat(row.get("visibility")).isEqualTo("PUBLIC");
-        assertThat(row.get("summary")).isEqualTo("주인 외래 키 쪽이에요.");
-        assertThat(row.get("thumbnail_url")).isEqualTo("/uploads/a.png");
-        assertThat(row.get("view_count")).isEqualTo(0);
-        assertThat(row.get("like_count")).isEqualTo(0);
+        assertThat(row).containsEntry("title", "JPA 정리")
+                .containsEntry("status", "PUBLISHED")
+                .containsEntry("category_id", defaultCategoryId(nayoung.blogId()))
+                .containsEntry("visibility", "PUBLIC")
+                .containsEntry("summary", "주인 외래 키 쪽이에요.")
+                .containsEntry("thumbnail_url", "/uploads/a.png")
+                .containsEntry("view_count", 0)
+                .containsEntry("like_count", 0);
     }
 
     @Test
@@ -105,7 +105,7 @@ class PostWriteApiTest extends IntegrationTest {
                 """);
         assertThat(tagNames(second)).containsExactly("Java");   // 처음 만들어진 표기를 써요
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM tags", Long.class)).isEqualTo(3);
-        assertThat(postRow(second).get("topic_id")).isEqualTo(1L);
+        assertThat(postRow(second)).containsEntry("topic_id", 1L);
     }
 
     @Test
@@ -236,7 +236,7 @@ class PostWriteApiTest extends IntegrationTest {
                     post.getThumbnailUrl(), post.getVisibility(), post.getTags());       // 트랜잭션 끝에 UPDATE
         });
 
-        assertThat(postRow(postId).get("title")).isEqualTo("바뀐 제목");
-        assertThat(postRow(postId).get("like_count")).isEqualTo(5);                     // 0으로 덮어쓰지 않았어요
+        assertThat(postRow(postId)).containsEntry("title", "바뀐 제목")
+                .containsEntry("like_count", 5);                     // 0으로 덮어쓰지 않았어요
     }
 }

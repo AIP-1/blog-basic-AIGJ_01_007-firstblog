@@ -14,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 고아 파일 정리 배치 (이미지 흐름 문서 6장 B). 매일 새벽 4시(한국 시간)에 한 번 돌아요.
@@ -39,17 +39,19 @@ public class OrphanImageCleanupJob {
     private final ImageCleanupProperties properties;
     private final JdbcTemplate jdbcTemplate;
     private final ImageReferenceChecker imageReferenceChecker;
+    private final TransactionTemplate transactionTemplate;
 
     public OrphanImageCleanupJob(UploadProperties uploadProperties, ImageCleanupProperties properties,
-                                 JdbcTemplate jdbcTemplate, ImageReferenceChecker imageReferenceChecker) {
+                                 JdbcTemplate jdbcTemplate, ImageReferenceChecker imageReferenceChecker,
+                                 TransactionTemplate transactionTemplate) {
         this.root = Path.of(uploadProperties.dir()).toAbsolutePath().normalize();
         this.properties = properties;
         this.jdbcTemplate = jdbcTemplate;
         this.imageReferenceChecker = imageReferenceChecker;
+        this.transactionTemplate = transactionTemplate;
     }
 
     @Scheduled(cron = "0 0 4 * * *", zone = "Asia/Seoul")
-    @Transactional
     public void scheduled() {
         if (properties.enabled()) {
             run(Instant.now());
@@ -58,10 +60,16 @@ public class OrphanImageCleanupJob {
 
     /**
      * 정리를 한 번 실행하고 지운 파일 수를 돌려줘요 (테스트에서도 직접 불러요).
-     * 이 트랜잭션은 잠금을 붙잡고 있으려고 쓰는 거예요. DB를 고치지 않아서 롤백할 것은 없어요.
+     * pg_try_advisory_xact_lock은 트랜잭션이 끝날 때 풀리므로 정리가 끝날 때까지 트랜잭션을 붙잡고 있어야 해요.
+     * 예전에는 @Transactional을 썼는데, scheduled()가 같은 객체의 this.run()을 부르면 Spring 프록시를 거치지 않아
+     * 어노테이션이 조용히 무시돼요 (self-invocation, Sonar S2229). 그래서 어떤 경로로 불려도 똑같이 동작하게
+     * TransactionTemplate로 트랜잭션을 직접 열어요. DB를 고치지 않아서 롤백할 것은 없어요.
      */
-    @Transactional
     public int run(Instant now) {
+        return transactionTemplate.execute(status -> runInTransaction(now));
+    }
+
+    private int runInTransaction(Instant now) {
         Boolean locked = jdbcTemplate.queryForObject("SELECT pg_try_advisory_xact_lock(?)", Boolean.class, LOCK_KEY);
         if (!Boolean.TRUE.equals(locked)) {
             log.info("이미지 정리: 다른 서버가 이미 정리 중이라 건너뛰어요");
