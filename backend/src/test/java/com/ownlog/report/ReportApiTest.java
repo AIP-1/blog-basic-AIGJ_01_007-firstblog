@@ -71,8 +71,8 @@ class ReportApiTest extends IntegrationTest {
         Map<String, Object> row = reportRow(body);
         assertThat(row).containsEntry("post_id", postId);
         assertThat(row.get("comment_id")).isNull();
-        assertThat(row).containsEntry("reporter_id", minsu.userId());
-        assertThat(row).containsEntry("status", "RECEIVED");
+        assertThat(row).containsEntry("reporter_id", minsu.userId())
+                .containsEntry("status", "RECEIVED");
     }
 
     @Test

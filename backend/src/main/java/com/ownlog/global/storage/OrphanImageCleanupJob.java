@@ -66,8 +66,7 @@ public class OrphanImageCleanupJob {
      * TransactionTemplate로 트랜잭션을 직접 열어요. DB를 고치지 않아서 롤백할 것은 없어요.
      */
     public int run(Instant now) {
-        Integer deleted = transactionTemplate.execute(status -> runInTransaction(now));
-        return deleted == null ? 0 : deleted;
+        return transactionTemplate.execute(status -> runInTransaction(now));
     }
 
     private int runInTransaction(Instant now) {

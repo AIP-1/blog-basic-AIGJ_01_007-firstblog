@@ -80,16 +80,16 @@ class PostWriteApiTest extends IntegrationTest {
         Long postId = ((Number) JsonPath.read(body, "$.id")).longValue();
 
         Map<String, Object> row = postRow(postId);
-        assertThat(row).containsEntry("title", "JPA 정리");
-        assertThat(row).containsEntry("status", "PUBLISHED");
         assertThat(row.get("published_at")).isNotNull();
-        assertThat(row).containsEntry("category_id", defaultCategoryId(nayoung.blogId()));
         assertThat(row.get("topic_id")).isNull();
-        assertThat(row).containsEntry("visibility", "PUBLIC");
-        assertThat(row).containsEntry("summary", "주인 외래 키 쪽이에요.");
-        assertThat(row).containsEntry("thumbnail_url", "/uploads/a.png");
-        assertThat(row).containsEntry("view_count", 0);
-        assertThat(row).containsEntry("like_count", 0);
+        assertThat(row).containsEntry("title", "JPA 정리")
+                .containsEntry("status", "PUBLISHED")
+                .containsEntry("category_id", defaultCategoryId(nayoung.blogId()))
+                .containsEntry("visibility", "PUBLIC")
+                .containsEntry("summary", "주인 외래 키 쪽이에요.")
+                .containsEntry("thumbnail_url", "/uploads/a.png")
+                .containsEntry("view_count", 0)
+                .containsEntry("like_count", 0);
     }
 
     @Test
@@ -236,7 +236,7 @@ class PostWriteApiTest extends IntegrationTest {
                     post.getThumbnailUrl(), post.getVisibility(), post.getTags());       // 트랜잭션 끝에 UPDATE
         });
 
-        assertThat(postRow(postId)).containsEntry("title", "바뀐 제목");
-        assertThat(postRow(postId)).containsEntry("like_count", 5);                     // 0으로 덮어쓰지 않았어요
+        assertThat(postRow(postId)).containsEntry("title", "바뀐 제목")
+                .containsEntry("like_count", 5);                     // 0으로 덮어쓰지 않았어요
     }
 }
