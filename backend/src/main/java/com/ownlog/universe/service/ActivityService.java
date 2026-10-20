@@ -29,7 +29,7 @@ public class ActivityService {
     public ActivityResponse getActivity(String username, LoginUser me) {
         Blog blog = blogService.getActiveBlog(username);
         LocalDate today = KstTime.today();
-        LocalDate from = today.minusDays(DAYS - 1);
+        LocalDate from = today.minusDays(DAYS - 1L);
 
         List<Day> days = graphRepository.findActivity(blog.getId(), blogService.isOwner(blog, me), KstTime.startOfDay(from))
                 .stream()
@@ -55,7 +55,8 @@ public class ActivityService {
 
     /** 최근 1년 안에서 가장 길게 이어 쓴 날 수 (days는 날짜 오름차순) */
     static int longestStreak(List<Day> days) {
-        int longest = 0, run = 0;
+        int longest = 0;
+        int run = 0;
         LocalDate prev = null;
         for (Day d : days) {
             run = prev != null && prev.plusDays(1).equals(d.date()) ? run + 1 : 1;

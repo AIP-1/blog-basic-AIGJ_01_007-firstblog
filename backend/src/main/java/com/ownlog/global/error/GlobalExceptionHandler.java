@@ -104,16 +104,16 @@ public class GlobalExceptionHandler {
         return toResponse(errorCode, List.of());
     }
 
-    /**
-     * 외래키 위반(이름이 "_fkey"로 끝나요): 글·댓글·카테고리를 지우는 동안 같은 대상에 좋아요·댓글·링크 등이 동시에 들어온 경우예요.
-     * 대상이 방금 사라진 거라 500이 아니라 404로 알려줘요.
-     */
     /** 지우는 쪽이 막힌 경우(아직 참조하는 행이 있음)는 대상이 사라진 게 아니라서 404로 바꾸지 않아요 (다시 시도하면 돼요) */
     private static boolean isDeleteSide(ConstraintViolationException cve) {
         String message = cve.getSQLException() == null ? null : cve.getSQLException().getMessage();
         return message != null && message.contains("still referenced");
     }
 
+    /**
+     * 외래키 위반(이름이 "_fkey"로 끝나요): 글·댓글·카테고리를 지우는 동안 같은 대상에 좋아요·댓글·링크 등이 동시에 들어온 경우예요.
+     * 대상이 방금 사라진 거라 500이 아니라 404로 알려줘요.
+     */
     private static ErrorCode foreignKeyError(String constraint) {
         if (!constraint.endsWith("_fkey")) {
             return null;

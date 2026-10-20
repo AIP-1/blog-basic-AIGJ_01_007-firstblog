@@ -13,7 +13,7 @@ import lombok.Getter;
 public class BusinessException extends RuntimeException {
 
     private final ErrorCode errorCode;
-    private final List<FieldError> fieldErrors;
+    private final transient List<FieldError> fieldErrors;   // 예외는 Serializable이라 직렬화 대상에서 빼요 (S1948)
 
     public BusinessException(ErrorCode errorCode) {
         this(errorCode, List.of());

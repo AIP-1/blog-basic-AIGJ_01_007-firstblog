@@ -1,6 +1,7 @@
 package com.ownlog.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -12,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.jayway.jsonpath.JsonPath;
 import com.ownlog.IntegrationTest;
+import java.time.Duration;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -72,8 +74,8 @@ class SecurityAuditTest extends IntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"nickname\":\"나영\",\"profileImageUrl\":null}"))
                 .andExpect(status().isOk());
 
-        Thread.sleep(200);   // 커밋 후 리스너
-        assertThat(victimFile).exists();
+        // 커밋 후 리스너가 돌 시간을 준 뒤에도 남의 파일이 그대로인지: 300ms 동안 계속 존재해야 해요 (S2925: sleep 대신 Awaitility)
+        await().during(Duration.ofMillis(300)).atMost(Duration.ofSeconds(2)).untilAsserted(() -> assertThat(victimFile).exists());
     }
 
     @Test
@@ -89,8 +91,7 @@ class SecurityAuditTest extends IntegrationTest {
         mockMvc.perform(put("/api/users/me").header(HttpHeaders.AUTHORIZATION, nayoung.bearer())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"nickname\":\"나영\",\"profileImageUrl\":null}"))
                 .andExpect(status().isOk());
-        Thread.sleep(200);
-        assertThat(file).doesNotExist();
+        await().atMost(Duration.ofSeconds(2)).untilAsserted(() -> assertThat(file).doesNotExist());
     }
 
     @Test

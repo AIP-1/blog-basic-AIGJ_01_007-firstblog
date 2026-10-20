@@ -156,7 +156,7 @@ class RelatednessTest {
                     title(docs, p.source()), title(docs, p.target()), p.score(), p.tags(), p.keywords()));
         }
 
-        assertThat(after.size()).isLessThan(before);
+        assertThat(after).hasSizeLessThan(before);
         // 부산 2일차 ~ 부산식 돼지국밥: "부산" 태그 + 함께 나온 단어로 이어져요
         assertThat(after).anyMatch(p -> Key.of(p.source(), p.target()).equals(Key.of(12, 20)) && p.tags().contains("부산"));
         // 부산 2일차 ~ 제주, 제주 ~ 도쿄: "여행" 태그 하나만 같아요 → 선 없음
@@ -198,7 +198,7 @@ class RelatednessTest {
         System.out.printf("[연관도 500] 예전 태그 선 %d개(상한 1,500에서 잘림) → 관련 선 %d개, %dms%n", before, after.size(), millis);
 
         assertThat(millis).isLessThan(1000);
-        assertThat(after.size()).isLessThanOrEqualTo(500 * 3);
+        assertThat(after).hasSizeLessThanOrEqualTo(500 * 3);
         // 넓은 태그(여행·일상…, 글 100개쯤에 붙음) 하나만으로 이어진 선은 없어요: 드문 태그나 함께 나온 단어가 꼭 있어요
         List<String> broadTags = List.of(broad);
         assertThat(after).allMatch(p -> p.tags().stream().anyMatch(t -> !broadTags.contains(t)) || !p.keywords().isEmpty());
