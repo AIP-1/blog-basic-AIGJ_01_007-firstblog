@@ -114,6 +114,7 @@ docker exec ownlog-postgres psql -U ownlog -d ownlog   # 로컬 DB 접속
 - 마이그레이션은 배포 중 예전 버전과 공존하도록 **추가만** 해요 (컬럼 삭제·이름 변경은 다음 릴리스에서, 문서 저장소 `docs/guide/배포와-CI-CD.md` 4.4).
 - `deploy.sh`는 시작 전에 DB 연결을 확인하고, 실패하면 원인(Caused by)을 보여줘요. 배포 결과는 Actions 화면이나 `https://ownlog.java21.net/api/topics`로 확인해요.
 - Nginx 설정(`~/nginx/ownlog.java21.net.conf`)을 바꾸면 강사님께 반영을 요청해야 해요.
+- 배포는 `concurrency`(Actions)와 `flock`(서버)으로 한 번에 하나만 돌아요. 서버에는 현재 + 직전 이미지가 남고, 문제가 생기면 Actions의 **Rollback** 워크플로로 다시 빌드 없이 되돌려요 (`~/ownlog-deploy/previous-image`).
 
 ## 11. Git 브랜치와 버전 (Git Flow)
 ### 브랜치
